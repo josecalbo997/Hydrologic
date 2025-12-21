@@ -286,4 +286,18 @@ if btn_calc:
             
         with t2:
             st.write(f"- Entrada Red: **{int(flow['entrada'])} L/día**")
-            st.write(f"- Producto: **{litros} L/día*
+            st.write(f"- Producto: **{litros} L/día**")
+            st.write(f"- Rechazo: **{int(flow['rechazo'])} L/día**")
+            
+        with t3:
+            txt = f"""
+            SOLUCIÓN AIMYWATER
+            ------------------
+            RO: {ro.nombre}
+            PRE: {descal[0].nombre if descal else "N/A"}
+               > Autonomía: {descal[1]:.1f} días
+            DEPÓSITO: {int(log['tanque'])} L
+            """
+            st.code(txt)
+else:
+    st.info("👈 Introduce datos para calcular.")
