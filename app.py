@@ -1,12 +1,14 @@
 import streamlit as st
 from fpdf import FPDF
 import base64
+import plotly.express as px
+import pandas as pd
 
 # ==============================================================================
-# 0. CONFIGURACIÓN Y ESTILOS
+# 0. CONFIGURACIÓN Y ESTILOS PREMIUM
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater V18 Multi-Mode",
+    page_title="AimyWater Premium",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -15,27 +17,55 @@ st.set_page_config(
 def local_css():
     st.markdown("""
     <style>
-        .stApp { background-color: #ffffff; color: #000000; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
         
-        div[data-testid="stMetric"] {
-            background-color: #f8f9fa !important;
-            border: 1px solid #dee2e6 !important;
-            padding: 10px !important;
-            border-radius: 8px !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        html, body, [class*="css"] {
+            font-family: 'Inter', sans-serif;
         }
         
-        div[data-testid="stMetricLabel"] { color: #6c757d !important; }
-        div[data-testid="stMetricValue"] { color: #003366 !important; }
-        h1, h2, h3 { color: #004d99 !important; }
+        .stApp { background-color: #f8f9fa; color: #1f2937; }
         
+        /* Tarjetas Métricas Estilo SaaS */
+        div[data-testid="stMetric"] {
+            background-color: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+            padding: 20px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        div[data-testid="stMetric"]:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6 !important;
+        }
+        
+        div[data-testid="stMetricLabel"] { color: #6b7280 !important; font-weight: 600; font-size: 0.9rem; }
+        div[data-testid="stMetricValue"] { color: #111827 !important; font-size: 1.8rem; }
+        
+        /* Encabezados */
+        h1, h2, h3 { color: #1e3a8a !important; font-weight: 700; letter-spacing: -0.025em; }
+        
+        /* Botón Principal */
         div.stButton > button:first-child {
-            background-color: #004d99 !important;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
             color: white !important;
-            border-radius: 5px;
-            height: 3em;
-            font-weight: bold;
+            border-radius: 8px;
+            height: 3.5em;
+            font-weight: 600;
             border: none;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+            transition: all 0.2s;
+        }
+        div.stButton > button:first-child:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3);
+        }
+        
+        /* Alertas personalizadas */
+        div[data-testid="stAlert"] {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
     </style>
     """, unsafe_allow_html=True)
@@ -118,7 +148,7 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
     except: pass
     pdf.ln(20)
 
-    titulo = "PROYECTO DE PLANTA DE TRATAMIENTO" if modo == "Planta Completa (RO)" else "PROYECTO DE DESCALCIFICACION"
+    titulo = "PROYECTO TÉCNICO - TRATAMIENTO DE AGUA"
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, titulo, 0, 1, 'C')
     pdf.ln(5)
@@ -132,12 +162,12 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
     pdf.cell(95, 8, f"Dureza: {dureza} Hf", 1, 1)
     if modo == "Planta Completa (RO)":
         pdf.cell(95, 8, f"Salinidad Entrada: {ppm_in} ppm", 1)
-        pdf.cell(95, 8, f"Salinidad Salida: {ppm_out} ppm", 1, 1)
+        pdf.cell(95, 8, f"Salinidad Objetivo: {ppm_out} ppm", 1, 1)
     pdf.ln(5)
 
     # 2. Equipos
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, "2. EQUIPOS SELECCIONADOS", 1, 1, 'L', 1)
+    pdf.cell(0, 8, "2. TREN DE TRATAMIENTO", 1, 1, 'L', 1)
     pdf.set_font("Arial", size=10)
 
     if modo == "Solo Descalcificación":
@@ -147,9 +177,9 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
             pdf.cell(10, 8, "", 0, 0)
             pdf.cell(0, 6, f"Botella: {descal[0].medida_botella} | Valvula: {descal[0].tipo_valvula}", 0, 1)
             pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Autonomia entre regeneraciones: {descal[1]:.1f} dias", 0, 1)
+            pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias", 0, 1)
             pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Consumo Sal Anual: {int(opex['kg_sal'])} Kg", 0, 1)
+            pdf.cell(0, 6, f"Consumo Sal: {int(opex['kg_sal'])} Kg/ano", 0, 1)
             if alerta_dias:
                 pdf.set_text_color(200,0,0)
                 pdf.cell(10, 8, "", 0, 0)
@@ -158,26 +188,20 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
         else:
             pdf.cell(0, 8, "No se encontro equipo adecuado", 0, 1)
             
-    else: # MODO RO
-        # Silex
+    else: 
         if silex:
             pdf.cell(0, 8, f"A. FILTRACION: {silex.nombre} ({silex.medida_botella})", 0, 1)
-        # Carbon
         if carbon:
             pdf.cell(0, 8, f"B. DECLORACION: {carbon.nombre} ({carbon.medida_botella})", 0, 1)
-        # Descal
         if descal:
             pdf.cell(0, 8, f"C. DESCALCIFICADOR: {descal[0].nombre}", 0, 1)
             pdf.cell(10, 6, "", 0, 0)
             pdf.cell(0, 6, f"Regeneracion cada {descal[1]:.1f} dias", 0, 1)
-        # RO
         pdf.cell(0, 8, f"D. OSMOSIS: {ro.nombre} ({ro.produccion_nominal} L/dia)", 0, 1)
 
     return pdf.output(dest='S').encode('latin-1')
 
 def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal):
-    
-    # --- VARIABLES INICIALES ---
     ro_sel = None
     descal_sel = None
     carbon_sel = None
@@ -188,16 +212,11 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
     v_buffer = 0
 
     if modo == "Solo Descalcificación":
-        # === MODO SOLO DESCALCIFICADOR ===
-        # El caudal de cálculo es el consumo horario del cliente
         caudal_calculo = consumo / horas
-        
-        # Selección Descalcificador (Regla 5 días)
         if dureza > 0:
             carga = (consumo / 1000) * dureza
             cands_validos = []
             cands_fallback = []
-            
             for d in catalogo_descal:
                 if (d.caudal_max_m3h * 1000) >= caudal_calculo:
                     dias = d.capacidad_intercambio / carga if carga > 0 else 99
@@ -212,14 +231,11 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                 descal_sel = cands_fallback[0]
                 alerta_autonomia = f"⚠️ Autonomía: {descal_sel[1]:.1f} días"
 
-        # OPEX Simple
         kg_sal = 0
-        if descal_sel:
-            kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
+        if descal_sel: kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
         opex = {"kg_sal": kg_sal, "coste_sal": kg_sal * coste_sal}
 
     else:
-        # === MODO PLANTA COMPLETA (RO) ===
         tcf = 1.0 if temp >= 25 else max(1.0 - ((25 - temp) * 0.03), 0.1)
         ppm_ro = ppm_in * 0.05
         if ppm_out < ppm_ro: ppm_out = ppm_ro
@@ -229,7 +245,6 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
         litros_ro = consumo * pct_ro
         litros_bypass = consumo - litros_ro
 
-        # Selección RO
         candidatos = []
         for ro in catalogo_ro:
             if ppm_in <= ro.max_ppm:
@@ -259,7 +274,6 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                 "caudal_filtros": caudal_filtros
             }
 
-            # Selección Filtros
             cands_silex = [s for s in catalogo_silex if (s.caudal_max_m3h * 1000) >= caudal_filtros]
             if cands_silex: 
                 cands_silex.sort(key=lambda x: x.caudal_max_m3h)
@@ -288,15 +302,27 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                     descal_sel = cands_fallback[0]
                     alerta_autonomia = f"⚠️ Autonomía: {descal_sel[1]:.1f} días"
 
-            # OPEX RO
             kg_sal = 0
             if descal_sel: kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
-            opex = {"kg_sal": kg_sal, "coste_sal": kg_sal * coste_sal}
+            
+            # OPEX detallado para el gráfico
+            opex_agua = (agua_total / 1000) * 365 * coste_agua
+            opex_sal = kg_sal * coste_sal
+            horas_ro = litros_ro / ((ro_sel.produccion_nominal * tcf)/24)
+            opex_luz = horas_ro * ro_sel.potencia_kw * 365 * coste_luz
+            
+            opex = {
+                "kg_sal": kg_sal,
+                "coste_agua": opex_agua,
+                "coste_sal": opex_sal,
+                "coste_luz": opex_luz,
+                "total": opex_agua + opex_sal + opex_luz
+            }
 
     return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_buffer
 
 # ==============================================================================
-# 3. INTERFAZ
+# 3. INTERFAZ VISUAL
 # ==============================================================================
 
 col_logo, col_header = st.columns([1, 5])
@@ -304,111 +330,143 @@ with col_logo:
     try: st.image("logo.png", width=150)
     except: st.warning("Logo?")
 with col_header:
-    st.title("AimyWater Architect V18")
-    st.markdown("**Plataforma Multimodo: Ósmosis y Descalcificación**")
+    st.title("AimyWater Premium")
+    st.markdown("**Plataforma de Ingeniería Hidráulica v19**")
 
 st.markdown("---")
 
 with st.sidebar:
-    # --- SELECTOR DE MODO ---
-    modo_calculo = st.radio("🎛️ MODO DE CÁLCULO", ["Planta Completa (RO)", "Solo Descalcificación"])
+    modo = st.radio("🎛️ Modo de Operación", ["Planta Completa (RO)", "Solo Descalcificación"])
     st.markdown("---")
     
-    st.header("⚙️ Configuración")
-    
+    st.header("⚙️ Parámetros")
     with st.expander("1. Hidráulica", expanded=True):
         consumo = st.number_input("Caudal Diario (L)", 100, 100000, 5000, step=500)
         horas = st.slider("Horas Trabajo", 1, 24, 12)
-        
-        if modo_calculo == "Planta Completa (RO)":
-            usar_buffer = st.checkbox("Usar Depósito Intermedio", value=True)
+        if modo == "Planta Completa (RO)":
+            usar_buffer = st.checkbox("Depósito Intermedio", value=True)
             activar_descal = st.checkbox("Incluir Descalcificador", value=True)
         else:
             usar_buffer = False
-            activar_descal = True # En modo solo descal, siempre activo
+            activar_descal = True
 
     with st.expander("2. Calidad Agua", expanded=True):
         dureza = st.number_input("Dureza (ºHf)", 0, 100, 35)
-        
-        if modo_calculo == "Planta Completa (RO)":
+        if modo == "Planta Completa (RO)":
             ppm_in = st.number_input("TDS Entrada", 50, 8000, 800)
             ppm_out = st.slider("TDS Objetivo", 0, 1000, 50)
             temp = st.slider("Temp (ºC)", 5, 35, 15)
         else:
-            ppm_in, ppm_out, temp = 0, 0, 25 # Defaults para modo descal
+            ppm_in, ppm_out, temp = 0, 0, 25
 
-    with st.expander("3. Costes"):
+    with st.expander("3. Costes (€)"):
         coste_agua = st.number_input("Agua €/m3", 0.0, 10.0, 1.5)
         coste_sal = st.number_input("Sal €/kg", 0.0, 5.0, 0.45)
         coste_luz = st.number_input("Luz €/kWh", 0.0, 1.0, 0.20)
     
     st.markdown("---")
-    btn_calc = st.button("CALCULAR", type="primary")
+    btn_calc = st.button("CALCULAR PROYECTO", type="primary")
 
 if btn_calc:
-    ro, descal, carbon, silex, flow, opex, alerta, v_buffer = calcular_logica(modo_calculo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal)
+    ro, descal, carbon, silex, flow, opex, alerta, v_buffer = calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal)
     
-    if modo_calculo == "Solo Descalcificación":
-        # --- VISTA SOLO DESCAL ---
+    if modo == "Solo Descalcificación":
         if descal:
-            st.subheader("✅ Equipo de Descalcificación Recomendado")
-            
-            c1, c2 = st.columns(2)
+            st.subheader("✅ Solución: Descalcificación Industrial")
+            c1, c2 = st.columns([1,1])
             with c1:
-                st.info(f"**MODELO:** {descal[0].nombre}")
+                st.info(f"**MODELO: {descal[0].nombre}**")
                 st.metric("Botella", descal[0].medida_botella)
                 st.metric("Configuración", descal[0].tipo_valvula)
-            
             with c2:
-                if alerta: st.error(alerta)
-                else: st.success("Autonomía Óptima")
+                if alerta: st.warning(alerta)
+                else: st.success("Autonomía Correcta")
                 st.metric("Regeneración", f"Cada {descal[1]:.1f} días")
-                st.metric("Consumo Sal", f"{int(opex['kg_sal'])} Kg/año")
+                st.metric("Sal Anual", f"{int(opex['kg_sal'])} Kg")
         else:
-            st.error("No se encontró un descalcificador estándar para este caudal.")
-
-    else:
-        # --- VISTA PLANTA RO (V17) ---
+            st.error("No se encontró equipo.")
+    
+    else: # MODO RO
         if not ro:
             st.error("❌ Sin solución viable.")
         else:
-            st.subheader("✅ Diseño de Planta")
-            k1, k2, k3, k4 = st.columns(4)
-            k1.metric("Ósmosis", ro.nombre)
-            k2.metric("Caudal Filtros", f"{int(flow['caudal_filtros'])} L/h")
-            k3.metric("Bypass", f"{flow['blending_pct']:.1f}%")
-            if descal: k4.metric("Descal", descal[0].nombre)
-            else: k4.metric("Descal", "N/A")
+            # --- DASHBOARD VISUAL ---
+            st.subheader("📊 Resumen del Proyecto")
             
-            st.markdown("---")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.info("PRE-TRATAMIENTO")
-                if silex: st.write(f"**1. Silex:** {silex.nombre}")
-                if carbon: st.write(f"**2. Carbón:** {carbon.nombre}")
-                if descal: 
-                    st.write(f"**3. Descal:** {descal[0].nombre}")
-                    if alerta: st.warning(alerta)
-                if usar_buffer: st.success(f"🛢️ Buffer: {int(v_buffer)} L")
-            
-            with c2:
-                st.info("ÓSMOSIS INVERSA")
-                st.write(f"**{ro.nombre}**")
-                st.write(f"Producción: {int(flow['prod_ro_dia'])} L/d")
+            # Diagrama de Flujo Visual (Emojis + Columnas)
+            st.markdown("#### 🏭 Tren de Tratamiento")
+            f1, f2, f3, f4, f5 = st.columns(5)
+            with f1:
+                st.markdown("#### 🪨")
+                if silex: st.caption(f"**Silex**\n{silex.medida_botella}")
+                else: st.caption("No Silex")
+            with f2:
+                st.markdown("#### ⚫")
+                if carbon: st.caption(f"**Carbón**\n{carbon.medida_botella}")
+                else: st.caption("No Carbón")
+            with f3:
+                st.markdown("#### 🧂")
+                if descal: st.caption(f"**Descal**\n{descal[0].medida_botella}")
+                else: st.caption("Antiincrustante")
+            with f4:
+                st.markdown("#### 🛡️")
+                if usar_buffer: st.caption(f"**Buffer**\n{int(v_buffer)} L")
+                else: st.caption("Directo")
+            with f5:
+                st.markdown("#### 💧")
+                st.caption(f"**Ósmosis**\n{ro.nombre}")
 
-    # --- PDF COMÚN ---
-    st.markdown("---")
-    col_pdf, _ = st.columns([1, 4])
-    with col_pdf:
-        try:
-            # Pasar 0 o None para variables que no apliquen en modo Descal
-            pdf_bytes = generar_pdf_tecnico(modo_calculo, ro, descal, carbon, silex, flow, 
-                                          flow.get('blending_pct', 0), consumo, ppm_in, ppm_out, dureza, alerta, opex)
-            b64 = base64.b64encode(pdf_bytes).decode()
-            href = f'<a href="data:application/octet-stream;base64,{b64}" download="informe_aimywater.pdf" style="text-decoration:none;"><button style="background-color:#cc0000;color:white;padding:10px;border-radius:5px;border:none;cursor:pointer;width:100%;">📄 Descargar PDF</button></a>'
-            st.markdown(href, unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"Error PDF: {e}")
+            st.markdown("---")
+
+            # PESTAÑAS DETALLADAS
+            tab_tec, tab_fin, tab_doc = st.tabs(["🛠️ Ingeniería", "💸 Análisis Financiero", "📄 Documentación"])
+            
+            with tab_tec:
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.success("Configuración RO")
+                    st.write(f"- Modelo: **{ro.nombre}**")
+                    st.write(f"- Producción Pura: **{int(flow['prod_ro_dia'])} L/d**")
+                    st.write(f"- Bypass: **{int(flow['caudal_bypass_dia'])} L/d** ({flow['blending_pct']:.1f}%)")
+                with c2:
+                    st.info("Configuración Filtros")
+                    st.write(f"- Caudal Diseño: **{int(flow['caudal_filtros'])} L/h**")
+                    if descal:
+                        st.write(f"- Descalcificador: **{descal[0].nombre}**")
+                        if alerta: st.error(alerta)
+            
+            with tab_fin:
+                c_chart, c_data = st.columns([2, 1])
+                with c_chart:
+                    # GRÁFICO DE DONUT DE COSTES
+                    data_dict = {
+                        "Concepto": ["Agua", "Sal", "Electricidad"],
+                        "Coste (€)": [opex['coste_agua'], opex['coste_sal'], opex['coste_luz']]
+                    }
+                    df = pd.DataFrame(data_dict)
+                    fig = px.pie(df, values='Coste (€)', names='Concepto', title='Distribución OPEX Anual', hole=0.4)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with c_data:
+                    st.metric("Coste Total", f"{(opex['total']/365):.2f} €/día")
+                    st.write(f"- Agua: {opex['coste_agua']:.0f} €/año")
+                    st.write(f"- Sal: {opex['coste_sal']:.0f} €/año")
+                    st.write(f"- Luz: {opex['coste_luz']:.0f} €/año")
+
+            with tab_doc:
+                try:
+                    pdf_bytes = generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, 
+                                                  flow.get('blending_pct', 0), consumo, ppm_in, ppm_out, dureza, alerta, opex)
+                    b64 = base64.b64encode(pdf_bytes).decode()
+                    href = f'<a href="data:application/octet-stream;base64,{b64}" download="informe_aimywater.pdf" style="text-decoration:none;"><button style="background-color:#cc0000;color:white;padding:10px;border-radius:5px;border:none;cursor:pointer;width:100%;">📥 Descargar Informe PDF</button></a>'
+                    st.markdown(href, unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Error PDF: {e}")
 
 else:
-    st.info("👈 Selecciona el modo y calcula.")
+    # LANDING PAGE AMIGABLE
+    st.info("👈 Configura tu proyecto en el menú lateral para comenzar.")
+    cols = st.columns(3)
+    cols[0].metric("Modo", "Ingeniería")
+    cols[1].metric("Estado", "Online 🟢")
+    cols[2].metric("IA", "Activa")
