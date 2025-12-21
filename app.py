@@ -1,11 +1,10 @@
 import streamlit as st
-import pandas as pd
 
 # ==============================================================================
-# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS (UI/UX)
+# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS (CORRECCIÓN VISUAL)
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater Pro Calc",
+    page_title="AimyWater Pro",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -14,59 +13,82 @@ st.set_page_config(
 def local_css():
     st.markdown("""
     <style>
-        /* Tipografía y Fondo */
-        .block-container {padding-top: 1rem; padding-bottom: 5rem;}
+        /* --- CORRECCIÓN DE COLORES (MODO CLARO FORZADO) --- */
         
+        /* Forzar fondo general claro para evitar conflictos */
+        .stApp {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
         /* Estilo de Tarjetas (Cards) para Métricas */
         div[data-testid="stMetric"] {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            background-color: #f8f9fa !important; /* Fondo Gris muy claro */
+            border: 1px solid #dee2e6 !important;
+            padding: 15px !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
         }
-        div[data-testid="stMetric"]:hover {
-            transform: translateY(-2px);
-            border-color: #004d99;
+
+        /* FORZAR COLOR DE TEXTO EN MÉTRICAS A NEGRO/AZUL */
+        div[data-testid="stMetricLabel"] {
+            color: #6c757d !important; /* Gris oscuro para el título pequeño */
+            font-size: 14px !important;
+        }
+        div[data-testid="stMetricValue"] {
+            color: #003366 !important; /* Azul AimyWater para el número */
+            font-weight: bold !important;
+        }
+        div[data-testid="stMetricDelta"] {
+            color: #28a745 !important; /* Verde para textos secundarios */
+        }
+
+        /* Corrección para textos generales y markdown */
+        p, h1, h2, h3, h4, h5, li {
+            color: #212529 !important; /* Negro suave, nunca blanco */
         }
         
-        /* Encabezados Azules Corporativos */
+        /* Títulos en Azul Corporativo */
         h1, h2, h3 {
-            color: #003366;
-            font-family: 'Helvetica Neue', sans-serif;
+            color: #004d99 !important;
         }
-        
+
         /* Botón de Cálculo */
         div.stButton > button:first-child {
-            background-color: #004d99;
-            color: white;
+            background-color: #004d99 !important;
+            color: white !important;
             border-radius: 5px;
             height: 3em;
             font-weight: 600;
             border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         div.stButton > button:first-child:hover {
-            background-color: #003366;
+            background-color: #003366 !important;
+            color: #ffffff !important;
         }
         
-        /* Alertas personalizadas */
-        .stAlert {
-            border-radius: 8px;
-        }
-        
-        /* Sidebar más limpia */
+        /* Sidebar: Asegurar legibilidad */
         section[data-testid="stSidebar"] {
-            background-color: #f8f9fa;
+            background-color: #f0f2f6 !important;
         }
+        section[data-testid="stSidebar"] h1, 
+        section[data-testid="stSidebar"] h2, 
+        section[data-testid="stSidebar"] label {
+            color: #003366 !important;
+        }
+        
+        /* Inputs y Sliders: Asegurar que se vean las etiquetas */
+        .stNumberInput label, .stSlider label {
+            color: #212529 !important;
+        }
+
     </style>
     """, unsafe_allow_html=True)
 
 local_css()
 
 # ==============================================================================
-# 1. LOGICA DE NEGOCIO (CLASES Y DATOS)
+# 1. LOGICA DE NEGOCIO
 # ==============================================================================
 
 class EquipoRO:
@@ -87,7 +109,7 @@ class Descalcificador:
         self.sal_por_regen_kg = sal_por_regen_kg
         self.tipo = tipo
 
-# --- CATÁLOGOS ---
+# Catálogos
 catalogo_ro = [
     EquipoRO("Doméstico", "PURHOME PLUS", 300, 3000, 0.50, 0.03),
     EquipoRO("Doméstico", "DF 800 UV-LED", 3000, 1500, 0.71, 0.08),
@@ -113,10 +135,9 @@ catalogo_descal = [
 # ==============================================================================
 
 def calcular_sistema(consumo_diario, ppm, dureza, temp, horas_punta, coste_agua, coste_sal, coste_luz):
-    # Corrección Temp
     tcf = 1.0 if temp >= 25 else max(1.0 - ((25 - temp) * 0.03), 0.1)
     
-    # Selección RO
+    # RO
     ro_sel = None
     candidatos = []
     for ro in catalogo_ro:
@@ -129,7 +150,7 @@ def calcular_sistema(consumo_diario, ppm, dureza, temp, horas_punta, coste_agua,
     if candidatos:
         ro_sel = next((x for x in candidatos if x.categoria == "Industrial"), candidatos[-1]) if consumo_diario > 600 else next((x for x in candidatos if x.categoria == "Doméstico"), candidatos[0])
 
-    # Selección Descalcificador & Flow
+    # Descalcificador & Flow
     descal_sel = None
     flow = {}
     opex = {}
@@ -146,7 +167,6 @@ def calcular_sistema(consumo_diario, ppm, dureza, temp, horas_punta, coste_agua,
             "prod_lh": caudal_prod_lh
         }
 
-        # Lógica Descalcificador
         if dureza > 5:
             carga = (agua_entrada / 1000) * dureza
             caudal_alim_lh = (ro_sel.produccion_nominal / 24 / ro_sel.eficiencia) * 1.5
@@ -192,7 +212,7 @@ def calcular_sistema(consumo_diario, ppm, dureza, temp, horas_punta, coste_agua,
     return ro_sel, descal_sel, flow, opex, logistica
 
 # ==============================================================================
-# 3. INTERFAZ DE USUARIO (LAYOUT PROFESIONAL)
+# 3. INTERFAZ DE USUARIO
 # ==============================================================================
 
 # --- HEADER ---
@@ -201,34 +221,33 @@ with c1:
     try:
         st.image("logo.png", width=140)
     except:
-        st.warning("⚠️ Logo no encontrado")
+        st.warning("⚠️ Sube 'logo.png' a GitHub")
 with c2:
     st.title("AimyWater Enterprise")
     st.markdown("##### Dimensionamiento Inteligente de Tratamiento de Aguas")
 
-st.markdown("---")
+st.divider()
 
-# --- SIDEBAR: DATOS DE ENTRADA ---
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### 🛠️ Configuración del Proyecto")
+    st.markdown("### ⚙️ Datos del Proyecto")
     
-    with st.expander("💧 Datos Hidráulicos", expanded=True):
-        litros = st.number_input("Consumo (L/día)", 100, 50000, 2000, step=100)
-        horas = st.slider("Horas de trabajo", 1, 24, 8)
+    st.markdown("#### 1. Hidráulica")
+    litros = st.number_input("Consumo (L/día)", 100, 50000, 2000, step=100)
+    horas = st.slider("Horas de trabajo", 1, 24, 8)
     
-    with st.expander("🧪 Calidad de Agua", expanded=True):
-        ppm = st.number_input("TDS (ppm)", 50, 8000, 800)
-        dureza = st.number_input("Dureza (ºHf)", 0, 100, 35)
-        temp = st.slider("Temperatura (ºC)", 5, 35, 15)
+    st.markdown("#### 2. Calidad Agua")
+    ppm = st.number_input("TDS (ppm)", 50, 8000, 800)
+    dureza = st.number_input("Dureza (ºHf)", 0, 100, 35)
+    temp = st.slider("Temperatura (ºC)", 5, 35, 15)
         
-    with st.expander("💶 Costes Unitarios"):
-        coste_agua = st.number_input("Agua (€/m3)", 0.0, 10.0, 1.5)
-        coste_sal = st.number_input("Sal (€/kg)", 0.0, 5.0, 0.45)
-        coste_luz = st.number_input("Luz (€/kWh)", 0.0, 1.0, 0.20)
+    st.markdown("#### 3. Económico (€)")
+    coste_agua = st.number_input("Agua (€/m3)", 0.0, 10.0, 1.5)
+    coste_sal = st.number_input("Sal (€/kg)", 0.0, 5.0, 0.45)
+    coste_luz = st.number_input("Luz (€/kWh)", 0.0, 1.0, 0.20)
     
     st.markdown("---")
     btn_calc = st.button("CALCULAR SOLUCIÓN", use_container_width=True)
-    st.caption("v10.0 Enterprise Build")
 
 # --- PANEL PRINCIPAL ---
 
@@ -236,95 +255,76 @@ if btn_calc:
     ro, descal, flow, opex, log = calcular_sistema(litros, ppm, dureza, temp, horas, coste_agua, coste_sal, coste_luz)
     
     if not ro:
-        st.error("❌ **NO SE ENCONTRÓ SOLUCIÓN:** La salinidad es demasiado alta o el caudal requiere diseño a medida.")
+        st.error("❌ **NO SE ENCONTRÓ SOLUCIÓN:** Salinidad excesiva o caudal fuera de rango.")
     else:
-        # --- SECCIÓN 1: LA RECOMENDACIÓN (HERO SECTION) ---
-        st.subheader("✅ Solución Técnica Recomendada")
+        # --- HERO SECTION ---
+        st.subheader("✅ Solución Recomendada")
         
         col_main, col_details = st.columns([1.5, 1])
         
         with col_main:
-            # Tarjeta Principal: Ósmosis
             with st.container():
-                st.info(f"🔵 **EQUIPO PRINCIPAL: {ro.nombre}**")
+                st.info(f"🔵 **EQUIPO: {ro.nombre}**")
                 m1, m2, m3 = st.columns(3)
-                m1.metric("Producción Real", f"{int(flow['prod_real_dia'])} L/día", f"{temp}ºC")
+                m1.metric("Producción Real", f"{int(flow['prod_real_dia'])} L/día", f"a {temp}ºC")
                 m2.metric("Eficiencia", f"{int(ro.eficiencia*100)}%")
                 m3.metric("Categoría", ro.categoria)
             
-            # Tarjeta Secundaria: Pretratamiento
             if descal:
                 d, dias = descal
                 with st.container():
                     st.warning(f"🟠 **PRE-TRATAMIENTO: {d.nombre}**")
                     d1, d2, d3 = st.columns(3)
-                    d1.metric("Tipo", d.tipo)
-                    d2.metric("Volumen Resina", f"{d.litros_resina} L")
+                    d1.metric("Resina", f"{d.litros_resina} L")
+                    d2.metric("Tipo", d.tipo)
                     d3.metric("Regeneración", f"Cada {dias:.1f} días")
             else:
-                st.success("🟢 **PRE-TRATAMIENTO:** No requerido (Agua Blanda)")
+                st.success("🟢 **AGUA BLANDA:** No requiere descalcificador")
 
         with col_details:
-            st.markdown("#### 📦 Logística y Acumulación")
+            st.markdown("#### 📦 Acumulación")
             if log["tanque"] > 0:
-                st.error(f"Requiere Acumulación")
-                st.metric("Depósito Mínimo", f"{int(log['tanque'])} Litros", "Para cubrir picos")
-                st.caption(f"La máquina produce {int(flow['prod_lh'])} L/h pero tú consumes {int(litros/horas)} L/h.")
+                st.error("Requiere Depósito")
+                st.metric("Volumen Mínimo", f"{int(log['tanque'])} Litros", "Para cubrir picos")
             else:
                 st.success("Suministro Directo")
-                st.caption("La producción del equipo cubre la demanda en tiempo real.")
+                st.metric("Estado", "OK", "Producción suficiente")
 
         st.markdown("---")
 
-        # --- SECCIÓN 2: DATOS FINANCIEROS Y OPERATIVOS (TABS) ---
-        t_fin, t_tec, t_text = st.tabs(["💰 Análisis Financiero", "⚙️ Datos Técnicos Detallados", "📋 Resumen para Cliente"])
+        # --- TABS ---
+        t_fin, t_tec, t_copy = st.tabs(["💰 Análisis Financiero", "⚙️ Datos Técnicos", "📋 Resumen"])
         
         with t_fin:
             st.markdown("#### Costes Operativos Estimados (OPEX)")
             cf1, cf2, cf3, cf4 = st.columns(4)
-            cf1.metric("Coste Diario", f"{(opex['total']/365):.2f} €", "Total")
+            cf1.metric("Coste Diario", f"{(opex['total']/365):.2f} €")
             cf2.metric("Agua", f"{opex['agua']:.0f} €/año")
             cf3.metric("Sal", f"{opex['sal']:.0f} €/año")
-            cf4.metric("Electricidad", f"{opex['elec']:.0f} €/año")
+            cf4.metric("Luz", f"{opex['elec']:.0f} €/año")
         
         with t_tec:
             ct1, ct2 = st.columns(2)
             with ct1:
                 st.markdown("**Balance de Aguas**")
-                st.write(f"- Agua Aporte (Red): **{int(flow['entrada'])} L/día**")
+                st.write(f"- Agua Aporte: **{int(flow['entrada'])} L/día**")
                 st.write(f"- Agua Producto: **{litros} L/día**")
-                st.write(f"- Rechazo a Desagüe: **{int(flow['rechazo'])} L/día**")
+                st.write(f"- Rechazo: **{int(flow['rechazo'])} L/día**")
             with ct2:
                 st.markdown("**Consumibles**")
-                st.write(f"- Consumo Sal Anual: **{int(opex['kg_sal'])} kg**")
-                st.write(f"- Potencia Instalada: **{ro.potencia_kw} kW**")
+                st.write(f"- Sal Anual: **{int(opex['kg_sal'])} kg**")
+                st.write(f"- Potencia: **{ro.potencia_kw} kW**")
 
-        with t_text:
-            st.markdown("#### 📝 Copiar y Pegar en Email/Presupuesto")
-            texto_resumen = f"""
-            *SOLUCIÓN DE TRATAMIENTO DE AGUA - AIMYWATER*
-            ---------------------------------------------
-            CLIENTE: Demanda {litros} L/día | {ppm} ppm | {dureza} ºHf
-            
-            1. EQUIPO RO: {ro.nombre}
-               - Producción estimada ({temp}ºC): {int(flow['prod_real_dia'])} L/día
-               
-            2. PRE-TRATAMIENTO: {descal[0].nombre if descal else "No requiere"}
-               - Configuración: {descal[0].tipo if descal else "N/A"}
-               
-            3. LOGÍSTICA:
-               - Depósito recomendado: {int(log['tanque'])} Litros
-               
-            Coste operativo estimado: {(opex['total']/365):.2f} €/día.
+        with t_copy:
+            st.markdown("#### Texto para Presupuesto")
+            txt = f"""
+            SOLUCIÓN AIMYWATER:
+            1. RO: {ro.nombre} ({int(flow['prod_real_dia'])} L/día)
+            2. PRE: {descal[0].nombre if descal else "N/A"}
+            3. LOG: {int(log['tanque'])} L Depósito
+            Coste Operativo: {(opex['total']/365):.2f} €/día
             """
-            st.code(texto_resumen, language="text")
+            st.code(txt)
 
 else:
-    # Landing Page Limpia
-    st.info("👈 **Bienvenido al sistema AimyWater.** Introduce los datos en el menú lateral para iniciar el cálculo.")
-    
-    # Dashboard placeholder
-    c1, c2, c3 = st.columns(3)
-    with c1: st.metric("Estado del Sistema", "Activo ✅")
-    with c2: st.metric("Equipos Cargados", f"{len(catalogo_ro)}")
-    with c3: st.metric("Versión", "10.0 Pro")
+    st.info("👈 Introduce los datos en el menú lateral para calcular.")
