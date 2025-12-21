@@ -5,10 +5,10 @@ import plotly.express as px
 import pandas as pd
 
 # ==============================================================================
-# 0. CONFIGURACIÓN Y ESTILOS "PREMIUM SUITE"
+# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS (V27 BLINDADA)
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater Suite",
+    page_title="AimyWater Pro",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -17,138 +17,92 @@ st.set_page_config(
 def local_css():
     st.markdown("""
     <style>
-        /* IMPORTAR FUENTE MODERNA (OUTFIT) */
+        /* --- IMPORTAR FUENTE MODERNA --- */
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
         
-        /* APLICAR FUENTE GLOBALMENTE */
+        /* --- FORZAR MODO CLARO TOTAL (ANULAR DARK MODE) --- */
         html, body, [class*="css"], [class*="st-"] {
             font-family: 'Outfit', sans-serif !important;
+            color: #1e293b !important; /* Texto Gris Oscuro */
         }
         
-        /* FONDO DE LA APLICACIÓN */
+        /* Fondo Principal */
         .stApp {
-            background-color: #f8fafc; /* Gris muy suave, casi blanco */
-            color: #1e293b;
+            background-color: #f1f5f9 !important; /* Gris muy suave */
         }
         
-        /* --- SIDEBAR PREMIUM --- */
+        /* Fondo Sidebar */
         section[data-testid="stSidebar"] {
-            background-color: #ffffff;
+            background-color: #ffffff !important;
             border-right: 1px solid #e2e8f0;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+        }
+        
+        /* --- CORRECCIÓN DE INPUTS (Para que se vean las etiquetas) --- */
+        .stNumberInput label, .stSlider label, .stSelectbox label, .stRadio label, .stCheckbox label {
+            color: #334155 !important; /* Gris oscuro */
+            font-weight: 600 !important;
+        }
+        
+        /* Inputs numéricos y textos */
+        input {
+            color: #000000 !important;
         }
         
         /* --- TARJETAS MÉTRICAS (KPIs) --- */
         div[data-testid="stMetric"] {
             background-color: #ffffff !important;
-            border: 1px solid #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important; /* Borde gris visible */
             padding: 20px !important;
-            border-radius: 16px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
-            transition: all 0.3s ease;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
         }
         
-        div[data-testid="stMetric"]:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-            border-color: #3b82f6 !important;
-        }
-        
-        div[data-testid="stMetricLabel"] {
-            color: #64748b !important;
-            font-size: 0.85rem !important;
-            font-weight: 600 !important;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        div[data-testid="stMetricValue"] {
-            color: #0f172a !important;
-            font-size: 1.8rem !important;
-            font-weight: 700 !important;
-        }
-        
-        /* --- BOTONES MODERNOS --- */
+        /* Textos dentro de las métricas */
+        div[data-testid="stMetricLabel"] { color: #64748b !important; font-size: 0.9rem !important; }
+        div[data-testid="stMetricValue"] { color: #0f172a !important; font-size: 1.8rem !important; }
+        div[data-testid="stMetricDelta"] { color: #0284c7 !important; }
+
+        /* --- BOTONES --- */
         div.stButton > button:first-child {
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
             color: white !important;
             border: none !important;
             padding: 0.75rem 1.5rem !important;
-            font-size: 1rem !important;
+            font-size: 1.1rem !important;
             font-weight: 600 !important;
-            border-radius: 12px !important;
-            box-shadow: 0 4px 6px rgba(2, 132, 199, 0.25) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
             transition: all 0.3s ease !important;
-            width: 100%;
         }
-        
         div.stButton > button:first-child:hover {
-            box-shadow: 0 10px 15px rgba(2, 132, 199, 0.4) !important;
             transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(2, 132, 199, 0.4) !important;
         }
         
-        div.stButton > button:active {
-            transform: translateY(0);
-        }
-
-        /* --- CONTENEDORES DE DEPÓSITOS (CUSTOM CARDS) --- */
+        /* --- TÍTULOS --- */
+        h1, h2, h3 { color: #0f172a !important; font-weight: 800 !important; }
+        
+        /* --- ESTILOS DE LOS DEPÓSITOS (CARDS HTML) --- */
         .tank-card {
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             text-align: center;
-            transition: transform 0.2s;
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
         }
+        .tank-final { border-bottom: 5px solid #2563eb; }
+        .tank-intermedio { border-bottom: 5px solid #16a34a; }
         
-        .tank-final {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border: 1px solid #bfdbfe;
-            color: #1e3a8a;
-        }
-        
-        .tank-intermedio {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            border: 1px solid #bbf7d0;
-            color: #14532d;
-        }
-        
-        .tank-icon { font-size: 2.5rem; margin-bottom: 10px; }
-        .tank-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
-        .tank-value { font-size: 2.2rem; font-weight: 800; margin: 5px 0; }
-        .tank-desc { font-size: 0.85rem; opacity: 0.8; }
-        
-        /* --- HEADERS --- */
-        h1, h2, h3 {
-            color: #0f172a !important;
-            font-weight: 700 !important;
-        }
-        
-        /* --- ALERTS --- */
-        .stAlert {
-            border-radius: 12px !important;
-            border: none !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        
-        /* --- TABS --- */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 24px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            height: 50px;
-            white-space: pre-wrap;
-            border-radius: 4px;
-            color: #64748b;
-            font-weight: 600;
-        }
-        .stTabs [aria-selected="true"] {
-            color: #0284c7 !important;
-            border-bottom-color: #0284c7 !important;
-        }
+        .tank-icon { font-size: 2rem; margin-bottom: 10px; display: block;}
+        .tank-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 1px;}
+        .tank-val { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 5px 0;}
+        .tank-tag { font-size: 0.75rem; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; color: #475569; font-weight: 600;}
+
+        /* Arreglar Tabs */
+        button[data-baseweb="tab"] { color: #475569 !important; font-weight: 600 !important; }
+        button[data-baseweb="tab"][aria-selected="true"] { color: #0284c7 !important; border-bottom-color: #0284c7 !important; }
 
     </style>
     """, unsafe_allow_html=True)
@@ -178,7 +132,7 @@ class PreTratamiento:
         self.sal_kg = sal_kg 
         self.tipo_valvula = tipo_valvula 
 
-# CATÁLOGOS (Iguales a V25)
+# CATÁLOGOS
 catalogo_ro = [
     EquipoRO("Doméstico", "PURHOME PLUS", 300, 3000, 0.50, 0.03),
     EquipoRO("Doméstico", "DF 800 UV-LED", 3000, 1500, 0.71, 0.08),
@@ -220,7 +174,7 @@ catalogo_silex = [
 ]
 
 # ==============================================================================
-# 2. GENERADOR PDF (Limpio)
+# 2. GENERADOR PDF
 # ==============================================================================
 
 def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito_final, v_buffer_intermedio, horas_trabajo, is_manual_final, is_manual_buffer):
@@ -307,7 +261,7 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
     return pdf.output(dest='S').encode('latin-1')
 
 # ==============================================================================
-# 3. MOTOR LÓGICO
+# 3. MOTOR LÓGICO V25 (HYBRID CALCULATION)
 # ==============================================================================
 
 def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal, manual_final_l, manual_buffer_l):
@@ -316,7 +270,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
     flow, opex = {}, {}
     alerta_autonomia = None
     
-    # Depósito Final Híbrido
+    # --- LOGICA HÍBRIDA DEPÓSITO FINAL ---
     if manual_final_l > 0:
         v_deposito_final = manual_final_l
         is_manual_final = True
@@ -328,6 +282,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
     is_manual_buffer = False
 
     if modo == "Solo Descalcificación":
+        # Estrategia: Llenado Lento (consumo / horas)
         caudal_calculo = consumo / horas
         
         if dureza > 0:
@@ -365,6 +320,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
         candidatos = []
         for ro in catalogo_ro:
             if ppm_in <= ro.max_ppm:
+                # Capacidad necesaria en las horas de trabajo
                 capacidad_jornada = (ro.produccion_nominal * tcf / 24) * horas
                 if capacidad_jornada >= litros_ro_dia:
                     candidatos.append(ro)
@@ -379,6 +335,8 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
             
             if usar_buffer:
                 caudal_filtros = agua_total / 20 
+                
+                # --- LOGICA HÍBRIDA BUFFER INTERMEDIO ---
                 if manual_buffer_l > 0:
                     v_buffer_intermedio = manual_buffer_l
                     is_manual_buffer = True
@@ -440,7 +398,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
 # 3. INTERFAZ VISUAL PREMIUM
 # ==============================================================================
 
-# Encabezado con Logo y Título
+# Encabezado
 c_head1, c_head2 = st.columns([1, 5])
 with c_head1:
     try: st.image("logo.png", width=140)
@@ -451,7 +409,7 @@ with c_head2:
 
 st.markdown("---")
 
-# Layout de dos columnas principales: Sidebar izquierda (Inputs) y Main derecha (Outputs)
+# Layout
 with st.sidebar:
     modo = st.radio("🎛️ MODO DE DISEÑO", ["Planta Completa (RO)", "Solo Descalcificación"])
     st.markdown("---")
@@ -493,36 +451,34 @@ with st.sidebar:
     st.markdown("---")
     btn_calc = st.button("CALCULAR PROYECTO", type="primary")
 
-# --- ÁREA DE RESULTADOS ---
+# --- RESULTADOS ---
 if btn_calc:
     ro, descal, carbon, silex, flow, opex, alerta, v_buffer, v_producto, is_man_final, is_man_buf = calcular_logica(
         modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal, man_final, man_buffer
     )
     
-    # VISUALIZACIÓN VISUAL DE DEPÓSITOS (Estética Premium)
+    # VISUALIZACIÓN DEPÓSITOS (HTML CARDS)
     col_tanks = st.columns(2)
     
-    # Depósito Intermedio (Solo si existe)
     if v_buffer > 0:
         with col_tanks[0]:
             tag = "PERSONALIZADO" if is_man_buf else "AUTO"
             st.markdown(f"""
             <div class='tank-card tank-intermedio'>
-                <div class='tank-icon'>🛡️</div>
+                <span class='tank-icon'>🛡️</span>
                 <div class='tank-title'>DEPÓSITO INTERMEDIO</div>
-                <div class='tank-value'>{int(v_buffer)} L</div>
-                <div class='tank-desc'>{tag} • Pre-Ósmosis</div>
+                <div class='tank-val'>{int(v_buffer)} L</div>
+                <div class='tank-tag'>{tag}</div>
             </div>""", unsafe_allow_html=True)
     
-    # Depósito Final (Siempre visible)
     with col_tanks[1] if v_buffer > 0 else col_tanks[0]:
         tag_fin = "PERSONALIZADO" if is_man_final else "AUTO"
         st.markdown(f"""
         <div class='tank-card tank-final'>
-            <div class='tank-icon'>🛢️</div>
+            <span class='tank-icon'>🛢️</span>
             <div class='tank-title'>DEPÓSITO FINAL</div>
-            <div class='tank-value'>{int(v_producto)} L</div>
-            <div class='tank-desc'>{tag_fin} • Agua Producto</div>
+            <div class='tank-val'>{int(v_producto)} L</div>
+            <div class='tank-tag'>{tag_fin}</div>
         </div>""", unsafe_allow_html=True)
     
     st.markdown("---")
@@ -554,7 +510,7 @@ if btn_calc:
             k3.metric("Carbón", carbon.medida_botella if carbon else "N/A")
             k4.metric("Descal", descal[0].medida_botella if descal else "N/A")
 
-            # Pestañas de detalle
+            # Pestañas
             tab_tec, tab_fin, tab_doc = st.tabs(["🛠️ Ingeniería", "💸 Financiero", "📄 Documentación"])
             
             with tab_tec:
@@ -570,11 +526,14 @@ if btn_calc:
             with tab_fin:
                 c_fin1, c_fin2 = st.columns([2, 1])
                 with c_fin1:
+                    # Gráfico Donut (Plotly)
+                    # Asegurar fondo transparente para que se vea bien
                     data = {
                         "Concepto": ["Agua", "Sal", "Luz"],
                         "Coste": [opex['coste_agua'], opex['coste_sal'], opex['coste_luz']]
                     }
                     fig = px.pie(pd.DataFrame(data), values='Coste', names='Concepto', hole=0.5)
+                    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig, use_container_width=True)
                 with c_fin2:
                     st.metric("OPEX Diario", f"{(opex['total']/365):.2f} €")
