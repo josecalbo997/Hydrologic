@@ -5,7 +5,7 @@ import plotly.express as px
 import pandas as pd
 
 # ==============================================================================
-# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS (V28: ESTABILIDAD TOTAL)
+# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS
 # ==============================================================================
 st.set_page_config(
     page_title="AimyWater Pro",
@@ -17,32 +17,22 @@ st.set_page_config(
 def local_css():
     st.markdown("""
     <style>
-        /* --- FUENTE GLOBAL --- */
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
         
-        /* RESET TOTAL: Forzar colores claros y legibles */
         html, body, [class*="css"], [data-testid="stAppViewContainer"] {
-            font-family: 'Manrope', sans-serif !important;
-            background-color: #ffffff !important; /* Fondo Blanco Puro */
-            color: #1e293b !important; /* Texto Gris Oscuro */
+            font-family: 'Outfit', sans-serif !important;
+            background-color: #ffffff !important;
+            color: #1e293b !important;
         }
 
-        /* --- SIDEBAR --- */
         section[data-testid="stSidebar"] {
-            background-color: #f8fafc !important; /* Gris muy suave */
+            background-color: #f8fafc !important;
             border-right: 1px solid #e2e8f0;
         }
         
-        /* --- TEXTOS Y TÍTULOS --- */
-        h1, h2, h3, h4, h5, h6 {
-            color: #0f172a !important; /* Azul muy oscuro casi negro */
-            font-weight: 800 !important;
-        }
-        p, li, span, label, div {
-            color: #334155 !important;
-        }
+        h1, h2, h3, h4, h5, h6 { color: #0f172a !important; font-weight: 800 !important; }
+        p, li, span, label, div { color: #334155 !important; }
 
-        /* --- TARJETAS MÉTRICAS (KPIs) --- */
         div[data-testid="stMetric"] {
             background-color: #ffffff !important;
             border: 1px solid #e2e8f0 !important;
@@ -51,20 +41,9 @@ def local_css():
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
         }
         
-        /* Etiquetas de Métricas */
-        div[data-testid="stMetricLabel"] p {
-            color: #64748b !important; /* Gris medio */
-            font-size: 0.9rem !important;
-            font-weight: 600 !important;
-        }
-        /* Valores de Métricas */
-        div[data-testid="stMetricValue"] div {
-            color: #0284c7 !important; /* Azul AimyWater vivo */
-            font-size: 1.6rem !important;
-            font-weight: 800 !important;
-        }
+        div[data-testid="stMetricLabel"] p { color: #64748b !important; font-size: 0.9rem !important; font-weight: 600 !important; }
+        div[data-testid="stMetricValue"] div { color: #0284c7 !important; font-size: 1.6rem !important; font-weight: 800 !important; }
 
-        /* --- BOTONES --- */
         div.stButton > button:first-child {
             background-color: #0284c7 !important;
             color: white !important;
@@ -75,52 +54,91 @@ def local_css():
             transition: background-color 0.2s;
         }
         div.stButton > button:first-child:hover {
-            background-color: #0369a1 !important; /* Azul más oscuro al pasar ratón */
-            color: white !important; /* Asegurar texto blanco */
-        }
-        /* Texto dentro del botón forzado a blanco */
-        div.stButton > button:first-child p {
+            background-color: #0369a1 !important;
             color: white !important;
         }
+        div.stButton > button:first-child p { color: white !important; }
 
-        /* --- CONTENEDORES PERSONALIZADOS (DEPÓSITOS) --- */
-        /* Usamos CSS nativo para evitar superposiciones de HTML */
         .tank-container {
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
             border: 1px solid;
         }
-        .tank-final {
-            background-color: #eff6ff !important;
-            border-color: #bfdbfe !important;
-        }
-        .tank-intermedio {
-            background-color: #f0fdf4 !important;
-            border-color: #bbf7d0 !important;
-        }
+        .tank-final { background-color: #eff6ff !important; border-color: #bfdbfe !important; }
+        .tank-intermedio { background-color: #f0fdf4 !important; border-color: #bbf7d0 !important; }
         
-        /* Forzar color de texto dentro de las tarjetas de depósito */
         .tank-header { color: #1e3a8a !important; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; }
         .tank-number { color: #172554 !important; font-weight: 800; font-size: 2rem; margin: 10px 0; }
         .tank-desc { color: #475569 !important; font-size: 0.9rem; }
 
-        /* Ajustes de Tabs */
-        button[data-baseweb="tab"] {
-            font-weight: 600 !important;
-        }
-        button[data-baseweb="tab"][aria-selected="true"] {
-            background-color: white !important;
-            border-bottom: 3px solid #0284c7 !important;
-        }
+        button[data-baseweb="tab"] { font-weight: 600 !important; }
+        button[data-baseweb="tab"][aria-selected="true"] { background-color: white !important; border-bottom: 3px solid #0284c7 !important; }
         
+        /* Estilo Login */
+        .login-box {
+            padding: 2rem;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: auto;
+        }
     </style>
     """, unsafe_allow_html=True)
 
 local_css()
 
 # ==============================================================================
-# 1. BASE DE DATOS
+# SISTEMA DE SEGURIDAD (LOGIN)
+# ==============================================================================
+
+def check_password():
+    """Retorna True si el usuario se loguea correctamente."""
+
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+
+    if st.session_state["password_correct"]:
+        return True
+
+    # Interfaz de Login
+    c1, c2, c3 = st.columns([1,2,1])
+    with c2:
+        st.markdown("### 🔒 Acceso AimyWater")
+        try:
+            st.image("logo.png", width=150)
+        except: pass
+        
+        st.info("Introduce tus credenciales para acceder a la ingeniería.")
+        
+        user = st.text_input("Usuario")
+        pwd = st.text_input("Contraseña", type="password")
+        
+        if st.button("ENTRAR", type="primary"):
+            # Verifica contra los secretos de la nube
+            try:
+                # Comprobamos si el usuario existe y la contraseña coincide
+                if user in st.secrets["users"] and pwd == st.secrets["users"][user]:
+                    st.session_state["password_correct"] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Usuario o contraseña incorrectos")
+            except Exception as e:
+                # Fallback por si no están configurados los secretos aún
+                if user == "admin" and pwd == "aimywater2025":
+                    st.session_state["password_correct"] = True
+                    st.rerun()
+                else:
+                    st.error("⚠️ Configura los secretos o usa credenciales de emergencia.")
+
+    return False
+
+if not check_password():
+    st.stop() # DETIENE LA EJECUCIÓN AQUÍ SI NO ESTÁ LOGUEADO
+
+# ==============================================================================
+# A PARTIR DE AQUÍ: EL CÓDIGO DE LA CALCULADORA (SOLO VISIBLE SI LOGUEADO)
 # ==============================================================================
 
 class EquipoRO:
@@ -225,6 +243,8 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
             pdf.cell(10, 8, "", 0, 0)
             pdf.cell(0, 6, f"Botella: {descal[0].medida_botella} | Valvula: {descal[0].tipo_valvula}", 0, 1)
             pdf.cell(10, 8, "", 0, 0)
+            pdf.cell(0, 6, f"Caudal Llenado: {int(consumo/horas_trabajo)} L/h", 0, 1)
+            pdf.cell(10, 8, "", 0, 0)
             pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias", 0, 1)
             
             if alerta:
@@ -237,7 +257,6 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
         if silex: pdf.cell(0, 8, f"A. FILTRACION: {silex.nombre} ({silex.medida_botella})", 0, 1)
         if carbon: pdf.cell(0, 8, f"B. DECLORACION: {carbon.nombre} ({carbon.medida_botella})", 0, 1)
         
-        # Buffer
         if v_buffer_intermedio > 0:
             pdf.ln(2)
             pdf.cell(0, 8, f"C. ACUMULACION INTERMEDIA (PRE-RO)", 0, 1)
@@ -278,12 +297,11 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
     flow, opex = {}, {}
     alerta_autonomia = None
     
-    # Depósito Final Híbrido
     if manual_final_l > 0:
         v_deposito_final = manual_final_l
         is_manual_final = True
     else:
-        v_deposito_final = consumo * 0.75 # Auto
+        v_deposito_final = consumo * 0.75 
         is_manual_final = False
 
     v_buffer_intermedio = 0
@@ -291,7 +309,6 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
 
     if modo == "Solo Descalcificación":
         caudal_calculo = consumo / horas
-        
         if dureza > 0:
             carga = (consumo / 1000) * dureza
             cands_validos, cands_fallback = [], []
@@ -330,7 +347,6 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                 capacidad_jornada = (ro.produccion_nominal * tcf / 24) * horas
                 if capacidad_jornada >= litros_ro_dia:
                     candidatos.append(ro)
-        
         if candidatos:
             ro_sel = next((x for x in candidatos if x.categoria == "Industrial"), candidatos[-1]) if litros_ro_dia > 600 else next((x for x in candidatos if x.categoria == "Doméstico"), candidatos[0])
 
@@ -345,7 +361,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                     v_buffer_intermedio = manual_buffer_l
                     is_manual_buffer = True
                 else:
-                    v_buffer_intermedio = caudal_bomba_ro_lh * 2 # Auto
+                    v_buffer_intermedio = caudal_bomba_ro_lh * 2 
                     is_manual_buffer = False
             else:
                 caudal_filtros = caudal_bomba_ro_lh + (litros_bypass_dia / horas)
@@ -399,7 +415,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
     return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_buffer_intermedio, v_deposito_final, is_manual_final, is_manual_buffer
 
 # ==============================================================================
-# 3. INTERFAZ VISUAL PREMIUM
+# 3. INTERFAZ VISUAL
 # ==============================================================================
 
 c_head1, c_head2 = st.columns([1, 5])
@@ -408,11 +424,17 @@ with c_head1:
     except: st.warning("Logo?")
 with c_head2:
     st.markdown("## 💧 AimyWater Engineering Suite")
-    st.caption("Plataforma Integral de Dimensionamiento v28")
+    st.caption("Plataforma Integral de Dimensionamiento v29")
 
 st.markdown("---")
 
 with st.sidebar:
+    st.markdown(f"👤 **Usuario:** {st.secrets.get('users', {}).keys()}") # Muestra usuario si quieres
+    if st.button("Cerrar Sesión"):
+        st.session_state["password_correct"] = False
+        st.rerun()
+    st.markdown("---")
+    
     modo = st.radio("🎛️ MODO DE DISEÑO", ["Planta Completa (RO)", "Solo Descalcificación"])
     st.markdown("---")
     
@@ -453,12 +475,12 @@ with st.sidebar:
     st.markdown("---")
     btn_calc = st.button("CALCULAR PROYECTO", type="primary")
 
+# --- RESULTADOS ---
 if btn_calc:
     ro, descal, carbon, silex, flow, opex, alerta, v_buffer, v_producto, is_man_final, is_man_buf = calcular_logica(
         modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal, man_final, man_buffer
     )
     
-    # VISUALIZACIÓN DEPÓSITOS (Usando HTML + CSS para evitar superposición)
     col_tanks = st.columns(2)
     
     if v_buffer > 0:
@@ -502,14 +524,12 @@ if btn_calc:
         else:
             st.subheader("📊 Tren de Tratamiento")
             
-            # KPI Cards
             k1, k2, k3, k4 = st.columns(4)
             k1.metric("Ósmosis", ro.nombre)
             k2.metric("Silex", silex.medida_botella if silex else "N/A")
             k3.metric("Carbón", carbon.medida_botella if carbon else "N/A")
             k4.metric("Descal", descal[0].medida_botella if descal else "N/A")
 
-            # Pestañas
             tab_tec, tab_fin, tab_doc = st.tabs(["🛠️ Ingeniería", "💸 Financiero", "📄 Documentación"])
             
             with tab_tec:
