@@ -8,8 +8,8 @@ import pandas as pd
 # 0. CONFIGURACIÓN
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater V23 Dual Tank",
-    page_icon="🏭",
+    page_title="AimyWater V24 Custom Tanks",
+    page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -41,7 +41,6 @@ def local_css():
             border: none;
         }
         
-        /* Estilo Depósito Final (Azul) */
         .deposito-final {
             background-color: #eff6ff;
             border-left: 5px solid #2563eb;
@@ -50,7 +49,6 @@ def local_css():
             margin-bottom: 10px;
         }
         
-        /* Estilo Depósito Intermedio (Gris/Verde) */
         .deposito-intermedio {
             background-color: #f0fdf4;
             border-left: 5px solid #16a34a;
@@ -61,6 +59,7 @@ def local_css():
         
         .tank-title { font-weight: bold; font-size: 1.1em; margin-bottom: 5px; }
         .tank-vol { font-size: 1.8em; font-weight: 800; }
+        .tank-tag { font-size: 0.8em; color: #666; font-style: italic; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -134,7 +133,7 @@ catalogo_silex = [
 # 2. GENERADOR PDF
 # ==============================================================================
 
-def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito_final, v_buffer_intermedio, horas_trabajo):
+def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito_final, v_buffer_intermedio, horas_trabajo, is_manual_final, is_manual_buffer):
     pdf = FPDF()
     pdf.add_page()
     
@@ -172,7 +171,10 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
             pdf.cell(10, 8, "", 0, 0)
             pdf.cell(0, 6, f"Botella: {descal[0].medida_botella} | Valvula: {descal[0].tipo_valvula}", 0, 1)
             pdf.cell(10, 8, "", 0, 0)
+            pdf.cell(0, 6, f"Caudal Llenado: {int(consumo/horas_trabajo)} L/h", 0, 1)
+            pdf.cell(10, 8, "", 0, 0)
             pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias", 0, 1)
+            
             if alerta:
                 alerta_clean = alerta.replace("⚠️", "ATENCION:")
                 pdf.set_text_color(200,0,0)
@@ -182,20 +184,21 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
     else: 
         if silex: pdf.cell(0, 8, f"A. FILTRACION: {silex.nombre} ({silex.medida_botella})", 0, 1)
         if carbon: pdf.cell(0, 8, f"B. DECLORACION: {carbon.nombre} ({carbon.medida_botella})", 0, 1)
+        
+        # Buffer en PDF
+        if v_buffer_intermedio > 0:
+            pdf.ln(2)
+            pdf.cell(0, 8, f"C. ACUMULACION INTERMEDIA (PRE-RO)", 0, 1)
+            nota_man = "(Seleccion Manual)" if is_manual_buffer else "(Calculado)"
+            pdf.cell(10, 8, "", 0, 0)
+            pdf.cell(0, 6, f"Volumen: {int(v_buffer_intermedio)} Litros {nota_man}", 0, 1)
+
         if descal:
-            pdf.cell(0, 8, f"C. DESCALCIFICADOR: {descal[0].nombre}", 0, 1)
+            pdf.ln(2)
+            pdf.cell(0, 8, f"D. DESCALCIFICADOR: {descal[0].nombre}", 0, 1)
             pdf.cell(10, 6, "", 0, 0)
             pdf.cell(0, 6, f"Regeneracion cada {descal[1]:.1f} dias", 0, 1)
         
-        # DEPÓSITO INTERMEDIO EN PDF
-        if v_buffer_intermedio > 0:
-            pdf.ln(2)
-            pdf.cell(0, 8, f"D. ACUMULACION INTERMEDIA (BUFFER PRE-RO)", 0, 1)
-            pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Volumen Recomendado: {int(v_buffer_intermedio)} Litros", 0, 1)
-            pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, "Funcion: Desacople hidraulico (Filtros lentos -> RO rapida)", 0, 1)
-
         if ro:
             pdf.ln(2)
             pdf.cell(0, 8, f"E. OSMOSIS INVERSA: {ro.nombre}", 0, 1)
@@ -207,25 +210,30 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, "3. ALMACENAMIENTO FINAL (PRODUCTO)", 1, 1, 'L', 1)
     pdf.set_font("Arial", size=10)
-    pdf.cell(0, 8, f"VOLUMEN DEPÓSITO RECOMENDADO: {int(v_deposito_final)} LITROS", 0, 1)
-    pdf.set_font("Arial", 'I', 9)
-    pdf.multi_cell(0, 5, "Deposito final para suministro a vivienda/industria con grupo de presion.")
+    nota_man_fin = "(Seleccion Manual Cliente)" if is_manual_final else "(Calculado 75% Consumo)"
+    pdf.cell(0, 8, f"VOLUMEN DEPÓSITO: {int(v_deposito_final)} LITROS {nota_man_fin}", 0, 1)
 
     return pdf.output(dest='S').encode('latin-1')
 
 # ==============================================================================
-# 3. MOTOR LÓGICO V23
+# 3. MOTOR LÓGICO V24
 # ==============================================================================
 
-def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer_intermedio, activar_descal):
+def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal, manual_final_l, manual_buffer_l):
     
     ro_sel, descal_sel, carbon_sel, silex_sel = None, None, None, None
     flow, opex = {}, {}
     alerta_autonomia = None
-    v_buffer_intermedio = 0
     
-    # Depósito Final (60-75% del consumo diario para picos)
-    v_deposito_final = consumo * 0.75 
+    # --- LÓGICA DEPÓSITO FINAL (AUTO vs MANUAL) ---
+    if manual_final_l > 0:
+        v_deposito_final = manual_final_l
+        is_manual_final = True
+    else:
+        v_deposito_final = consumo * 0.75 # Auto: 75% del consumo
+        is_manual_final = False
+
+    is_manual_buffer = False # Default
 
     if modo == "Solo Descalcificación":
         # Estrategia: Llenado Lento
@@ -251,6 +259,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
         kg_sal = 0
         if descal_sel: kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
         opex = {"kg_sal": kg_sal, "coste_sal": kg_sal * coste_sal, "total": kg_sal * coste_sal}
+        v_buffer_intermedio = 0
 
     else:
         # MODO RO
@@ -263,7 +272,6 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
         litros_ro_dia = consumo * pct_ro
         litros_bypass_dia = consumo - litros_ro_dia
 
-        # Selección RO (Producción 24h)
         candidatos = []
         for ro in catalogo_ro:
             if ppm_in <= ro.max_ppm:
@@ -278,19 +286,22 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
             agua_entrada_ro = litros_ro_dia / ro_sel.eficiencia
             agua_total = agua_entrada_ro + litros_bypass_dia
             
-            # Caudal instantáneo que chupa la bomba de RO
             caudal_bomba_ro_lh = (ro_sel.produccion_nominal / 24 / ro_sel.eficiencia) * 1.5 
             
-            if usar_buffer_intermedio:
-                # LÓGICA BUFFER ACTIVADA
-                # Filtros trabajan despacio (20h) para llenar el buffer
-                caudal_diseno_filtros = agua_total / 20 
-                # El buffer tiene que aguantar el tirón de la RO
-                v_buffer_intermedio = caudal_bomba_ro_lh * 1.5 # 1.5h de autonomía de bomba
+            if usar_buffer:
+                # Si hay buffer, los filtros van lentos
+                caudal_filtros = agua_total / 20 
+                
+                # --- LÓGICA BUFFER (AUTO vs MANUAL) ---
+                if manual_buffer_l > 0:
+                    v_buffer_intermedio = manual_buffer_l
+                    is_manual_buffer = True
+                else:
+                    v_buffer_intermedio = caudal_bomba_ro_lh * 2 # Auto: 2h de RO
+                    is_manual_buffer = False
             else:
-                # LÓGICA DIRECTA
-                # Filtros deben aguantar el tirón directo de la bomba RO
-                caudal_diseno_filtros = caudal_bomba_ro_lh + (litros_bypass_dia / horas)
+                # Directo: Filtros a velocidad de bomba RO
+                caudal_filtros = caudal_bomba_ro_lh + (litros_bypass_dia / horas)
                 v_buffer_intermedio = 0
 
             flow = {
@@ -298,16 +309,15 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                 "caudal_bypass_dia": litros_bypass_dia,
                 "prod_total_dia": consumo,
                 "blending_pct": (litros_bypass_dia / consumo) * 100,
-                "caudal_filtros": caudal_diseno_filtros
+                "caudal_filtros": caudal_filtros
             }
 
-            # Selección Filtros
-            cands_silex = [s for s in catalogo_silex if (s.caudal_max_m3h * 1000) >= caudal_diseno_filtros]
+            cands_silex = [s for s in catalogo_silex if (s.caudal_max_m3h * 1000) >= caudal_filtros]
             if cands_silex: 
                 cands_silex.sort(key=lambda x: x.caudal_max_m3h)
                 silex_sel = cands_silex[0]
 
-            cands_carbon = [c for c in catalogo_carbon if (c.caudal_max_m3h * 1000) >= caudal_diseno_filtros]
+            cands_carbon = [c for c in catalogo_carbon if (c.caudal_max_m3h * 1000) >= caudal_filtros]
             if cands_carbon:
                 cands_carbon.sort(key=lambda x: x.caudal_max_m3h)
                 carbon_sel = cands_carbon[0]
@@ -316,7 +326,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                 carga = (agua_total / 1000) * dureza
                 cands_validos, cands_fallback = [], []
                 for d in catalogo_descal:
-                    if (d.caudal_max_m3h * 1000) >= caudal_diseno_filtros:
+                    if (d.caudal_max_m3h * 1000) >= caudal_filtros:
                         dias = d.capacidad_intercambio / carga if carga > 0 else 99
                         if dias >= 5.0: cands_validos.append((d, dias))
                         else: cands_fallback.append((d, dias))
@@ -339,7 +349,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
             
             opex = {"kg_sal": kg_sal, "coste_agua": opex_agua, "coste_sal": opex_sal, "coste_luz": opex_luz, "total": opex_agua + opex_sal + opex_luz}
 
-    return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_buffer_intermedio, v_deposito_final
+    return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_buffer_intermedio, v_deposito_final, is_manual_final, is_manual_buffer
 
 # ==============================================================================
 # 3. INTERFAZ VISUAL
@@ -350,8 +360,8 @@ with col_logo:
     try: st.image("logo.png", width=150)
     except: st.warning("Logo?")
 with col_header:
-    st.title("AimyWater Premium V23")
-    st.markdown("**Plataforma de Ingeniería Hidráulica (Arquitectura Doble Depósito)**")
+    st.title("AimyWater Premium V24")
+    st.markdown("**Plataforma de Ingeniería Hidráulica (Custom Tanks)**")
 
 st.markdown("---")
 
@@ -359,19 +369,28 @@ with st.sidebar:
     modo = st.radio("🎛️ Modo", ["Planta Completa (RO)", "Solo Descalcificación"])
     st.markdown("---")
     
-    st.header("⚙️ Parámetros")
+    st.header("⚙️ Configuración")
     with st.expander("1. Hidráulica", expanded=True):
         consumo = st.number_input("Consumo Diario (Litros/24h)", 100, 100000, 2000, step=500)
         horas = st.slider("Horas Trabajo Planta", 1, 24, 20)
         
         if modo == "Planta Completa (RO)":
-            usar_buffer = st.checkbox("Usar Depósito Intermedio (Antes de RO)", value=True, help="Permite filtros más pequeños.")
+            usar_buffer = st.checkbox("Usar Depósito Intermedio (Pre-RO)", value=True)
             activar_descal = st.checkbox("Incluir Descalcificador", value=True)
         else:
             usar_buffer = False
             activar_descal = True
 
-    with st.expander("2. Calidad Agua", expanded=True):
+    # --- NUEVA SECCIÓN: ACUMULACIÓN MANUAL ---
+    with st.expander("2. Acumulación (Depósitos)"):
+        st.caption("Deja en 0 para cálculo automático.")
+        manual_final = st.number_input("Volumen Depósito Final (L)", 0, 50000, 0, step=100)
+        
+        manual_buffer = 0
+        if usar_buffer:
+            manual_buffer = st.number_input("Volumen Depósito Intermedio (L)", 0, 50000, 0, step=100)
+
+    with st.expander("3. Calidad Agua", expanded=False):
         dureza = st.number_input("Dureza (ºHf)", 0, 100, 35)
         if modo == "Planta Completa (RO)":
             ppm_in = st.number_input("TDS Entrada", 50, 8000, 800)
@@ -380,7 +399,7 @@ with st.sidebar:
         else:
             ppm_in, ppm_out, temp = 0, 0, 25
 
-    with st.expander("3. Costes"):
+    with st.expander("4. Costes", expanded=False):
         coste_agua = st.number_input("Agua €/m3", 0.0, 10.0, 1.5)
         coste_sal = st.number_input("Sal €/kg", 0.0, 5.0, 0.45)
         coste_luz = st.number_input("Luz €/kWh", 0.0, 1.0, 0.20)
@@ -389,26 +408,30 @@ with st.sidebar:
     btn_calc = st.button("CALCULAR PROYECTO", type="primary")
 
 if btn_calc:
-    ro, descal, carbon, silex, flow, opex, alerta, v_buffer, v_producto = calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal)
+    ro, descal, carbon, silex, flow, opex, alerta, v_buffer, v_producto, is_man_final, is_man_buf = calcular_logica(
+        modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal, manual_final, manual_buffer
+    )
     
     # --- VISUALIZACIÓN DEPÓSITOS ---
     c_dep1, c_dep2 = st.columns(2)
     
     if v_buffer > 0:
         with c_dep1:
+            tag = "(MANUAL)" if is_man_buf else "(AUTO)"
             st.markdown(f"""
             <div class='deposito-intermedio'>
                 <div class='tank-title'>🛡️ DEPÓSITO INTERMEDIO (PRE-RO)</div>
-                <div class='tank-vol'>{int(v_buffer)} Litros</div>
-                <p>Permite pre-tratamiento lento y alimentación rápida a RO.</p>
+                <div class='tank-vol'>{int(v_buffer)} Litros <span class='tank-tag'>{tag}</span></div>
+                <p>Alimentación a Ósmosis</p>
             </div>""", unsafe_allow_html=True)
     
     with c_dep2 if v_buffer > 0 else c_dep1:
+        tag_fin = "(MANUAL)" if is_man_final else "(AUTO)"
         st.markdown(f"""
         <div class='deposito-final'>
             <div class='tank-title'>🛢️ DEPÓSITO FINAL (PRODUCTO)</div>
-            <div class='tank-vol'>{int(v_producto)} Litros</div>
-            <p>Acumulación para consumo de la vivienda.</p>
+            <div class='tank-vol'>{int(v_producto)} Litros <span class='tank-tag'>{tag_fin}</span></div>
+            <p>Suministro a Vivienda/Industria</p>
         </div>""", unsafe_allow_html=True)
     
     st.markdown("---")
@@ -483,7 +506,8 @@ if btn_calc:
             with tab_doc:
                 try:
                     pdf_bytes = generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, 
-                                                  flow.get('blending_pct', 0), consumo, ppm_in, ppm_out, dureza, alerta, opex, v_producto, v_buffer, horas)
+                                                  flow.get('blending_pct', 0), consumo, ppm_in, ppm_out, dureza, alerta, opex, 
+                                                  v_producto, v_buffer, horas, is_man_final, is_man_buf)
                     b64 = base64.b64encode(pdf_bytes).decode()
                     href = f'<a href="data:application/octet-stream;base64,{b64}" download="informe_aimywater.pdf" style="text-decoration:none;"><button style="background-color:#cc0000;color:white;padding:10px;border-radius:5px;border:none;cursor:pointer;width:100%;">📥 Descargar Informe PDF</button></a>'
                     st.markdown(href, unsafe_allow_html=True)
