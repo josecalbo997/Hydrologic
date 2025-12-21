@@ -8,8 +8,8 @@ import pandas as pd
 # 0. CONFIGURACIÓN
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater V22 Storage",
-    page_icon="💧",
+    page_title="AimyWater V23 Dual Tank",
+    page_icon="🏭",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -41,16 +41,26 @@ def local_css():
             border: none;
         }
         
-        .deposito-box {
-            background-color: #dbeafe;
-            border: 2px solid #3b82f6;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 20px;
+        /* Estilo Depósito Final (Azul) */
+        .deposito-final {
+            background-color: #eff6ff;
+            border-left: 5px solid #2563eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
         }
-        .deposito-title { color: #1e40af; font-weight: bold; font-size: 1.2em; }
-        .deposito-val { color: #1e3a8a; font-weight: 800; font-size: 2em; }
+        
+        /* Estilo Depósito Intermedio (Gris/Verde) */
+        .deposito-intermedio {
+            background-color: #f0fdf4;
+            border-left: 5px solid #16a34a;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .tank-title { font-weight: bold; font-size: 1.1em; margin-bottom: 5px; }
+        .tank-vol { font-size: 1.8em; font-weight: 800; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -121,10 +131,10 @@ catalogo_silex = [
 ]
 
 # ==============================================================================
-# 2. GENERADOR PDF (FIXED EMOJIS)
+# 2. GENERADOR PDF
 # ==============================================================================
 
-def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, vol_deposito, horas_trabajo):
+def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito_final, v_buffer_intermedio, horas_trabajo):
     pdf = FPDF()
     pdf.add_page()
     
@@ -136,19 +146,18 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
     pdf.cell(0, 10, "PROYECTO TÉCNICO AIMYWATER", 0, 1, 'C')
     pdf.ln(5)
 
-    # 1. BASES DE DISEÑO
+    # 1. BASES
     pdf.set_fill_color(235, 245, 255)
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, "1. BASES DE DISEÑO (PRODUCCIÓN 24H)", 1, 1, 'L', 1)
+    pdf.cell(0, 8, "1. BASES DE DISEÑO", 1, 1, 'L', 1)
     pdf.set_font("Arial", size=10)
-    pdf.cell(95, 8, f"Consumo Diario Total: {consumo} L/dia", 1)
-    pdf.cell(95, 8, f"Horas Produccion: {horas} horas/dia", 1, 1)
+    pdf.cell(95, 8, f"Consumo Diario: {consumo} L/dia", 1)
+    pdf.cell(95, 8, f"Horas Produccion: {horas_trabajo} h/dia", 1, 1)
     pdf.cell(95, 8, f"Dureza: {dureza} Hf", 1)
-    
     if modo == "Planta Completa (RO)":
         pdf.cell(95, 8, f"TDS Entrada: {ppm_in} ppm", 1, 1)
     else:
-        pdf.cell(95, 8, f"Modo: Solo Descalcificacion", 1, 1)
+        pdf.cell(95, 8, "", 1, 1)
     pdf.ln(5)
 
     # 2. EQUIPOS
@@ -163,10 +172,7 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
             pdf.cell(10, 8, "", 0, 0)
             pdf.cell(0, 6, f"Botella: {descal[0].medida_botella} | Valvula: {descal[0].tipo_valvula}", 0, 1)
             pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Caudal Llenado: {int(consumo/horas)} L/h (Calculado para llenar deposito en {horas}h)", 0, 1)
-            pdf.cell(10, 8, "", 0, 0)
             pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias", 0, 1)
-            
             if alerta:
                 alerta_clean = alerta.replace("⚠️", "ATENCION:")
                 pdf.set_text_color(200,0,0)
@@ -181,299 +187,57 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
             pdf.cell(10, 6, "", 0, 0)
             pdf.cell(0, 6, f"Regeneracion cada {descal[1]:.1f} dias", 0, 1)
         
+        # DEPÓSITO INTERMEDIO EN PDF
+        if v_buffer_intermedio > 0:
+            pdf.ln(2)
+            pdf.cell(0, 8, f"D. ACUMULACION INTERMEDIA (BUFFER PRE-RO)", 0, 1)
+            pdf.cell(10, 8, "", 0, 0)
+            pdf.cell(0, 6, f"Volumen Recomendado: {int(v_buffer_intermedio)} Litros", 0, 1)
+            pdf.cell(10, 8, "", 0, 0)
+            pdf.cell(0, 6, "Funcion: Desacople hidraulico (Filtros lentos -> RO rapida)", 0, 1)
+
         if ro:
-            pdf.cell(0, 8, f"D. OSMOSIS INVERSA: {ro.nombre}", 0, 1)
+            pdf.ln(2)
+            pdf.cell(0, 8, f"E. OSMOSIS INVERSA: {ro.nombre}", 0, 1)
             pdf.cell(10, 6, "", 0, 0)
             pdf.cell(0, 6, f"Produccion Nominal: {ro.produccion_nominal} L/dia", 0, 1)
 
-    # 3. DEPÓSITO
+    # 3. DEPÓSITO FINAL
     pdf.ln(5)
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, "3. ACUMULACIÓN Y SUMINISTRO", 1, 1, 'L', 1)
+    pdf.cell(0, 8, "3. ALMACENAMIENTO FINAL (PRODUCTO)", 1, 1, 'L', 1)
     pdf.set_font("Arial", size=10)
-    pdf.cell(0, 8, f"VOLUMEN DEPÓSITO RECOMENDADO: {int(vol_deposito)} LITROS", 0, 1)
+    pdf.cell(0, 8, f"VOLUMEN DEPÓSITO RECOMENDADO: {int(v_deposito_final)} LITROS", 0, 1)
     pdf.set_font("Arial", 'I', 9)
-    pdf.multi_cell(0, 5, "NOTA: El sistema produce agua lentamente durante el dia. Este deposito acumula el agua tratada para satisfacer la demanda instantanea (duchas, grifos) mediante un grupo de presion a la salida.")
+    pdf.multi_cell(0, 5, "Deposito final para suministro a vivienda/industria con grupo de presion.")
 
     return pdf.output(dest='S').encode('latin-1')
 
 # ==============================================================================
-# 3. MOTOR LÓGICO V22 (STORAGE FIRST)
+# 3. MOTOR LÓGICO V23
 # ==============================================================================
 
-def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal):
+def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer_intermedio, activar_descal):
     
     ro_sel, descal_sel, carbon_sel, silex_sel = None, None, None, None
     flow, opex = {}, {}
     alerta_autonomia = None
     v_buffer_intermedio = 0
     
-    # 1. CÁLCULO DEL DEPÓSITO FINAL (El pulmón de la casa)
-    # Debe ser capaz de aguantar el consumo diario casi entero si la producción es lenta.
-    # Recomendamos 75% del consumo diario para ir sobrados.
+    # Depósito Final (60-75% del consumo diario para picos)
     v_deposito_final = consumo * 0.75 
 
     if modo == "Solo Descalcificación":
         # Estrategia: Llenado Lento
-        # El descalcificador NO tiene que dar el caudal de la ducha.
-        # Solo tiene que ser capaz de llenar el depósito en las 'horas' configuradas.
-        caudal_llenado_necesario_lh = consumo / horas
+        caudal_calculo = consumo / horas
         
         if dureza > 0:
             carga = (consumo / 1000) * dureza
             cands_validos, cands_fallback = [], []
-            
             for d in catalogo_descal:
-                # Comprobamos si el equipo puede dar el caudal de llenado lento
-                if (d.caudal_max_m3h * 1000) >= caudal_llenado_necesario_lh:
+                if (d.caudal_max_m3h * 1000) >= caudal_calculo:
                     dias = d.capacidad_intercambio / carga if carga > 0 else 99
                     if dias >= 5.0: cands_validos.append((d, dias))
                     else: cands_fallback.append((d, dias))
             
-            if cands_validos:
-                cands_validos.sort(key=lambda x: x[0].medida_botella)
-                descal_sel = cands_validos[0]
-            elif cands_fallback:
-                cands_fallback.sort(key=lambda x: x[0].caudal_max_m3h, reverse=True)
-                descal_sel = cands_fallback[0]
-                alerta_autonomia = f"⚠️ Autonomía: {descal_sel[1]:.1f} días"
-
-        kg_sal = 0
-        if descal_sel: kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
-        opex = {"kg_sal": kg_sal, "coste_sal": kg_sal * coste_sal, "total": kg_sal * coste_sal}
-
-    else:
-        # MODO RO (Con Depósito Final)
-        tcf = 1.0 if temp >= 25 else max(1.0 - ((25 - temp) * 0.03), 0.1)
-        
-        # Blending
-        ppm_ro = ppm_in * 0.05
-        if ppm_out < ppm_ro: ppm_out = ppm_ro
-        pct_ro = 1.0 if ppm_in == ppm_ro else (ppm_in - ppm_out) / (ppm_in - ppm_ro)
-        pct_ro = max(0.0, min(1.0, pct_ro))
-        
-        litros_ro_dia = consumo * pct_ro
-        litros_bypass_dia = consumo - litros_ro_dia
-
-        # Selección RO basada en PRODUCCIÓN DIARIA (24h)
-        # No importa la velocidad instantánea, importa que en 'horas' haga los litros.
-        candidatos = []
-        for ro in catalogo_ro:
-            if ppm_in <= ro.max_ppm:
-                # Capacidad Real en las horas de trabajo definidas
-                capacidad_jornada = (ro.produccion_nominal * tcf / 24) * horas
-                if capacidad_jornada >= litros_ro_dia:
-                    candidatos.append(ro)
-        
-        if candidatos:
-            ro_sel = next((x for x in candidatos if x.categoria == "Industrial"), candidatos[-1]) if litros_ro_dia > 600 else next((x for x in candidatos if x.categoria == "Doméstico"), candidatos[0])
-
-        if ro_sel:
-            # Ahora dimensionamos el Pretratamiento
-            # El pretratamiento debe alimentar a la bomba de la RO cuando esta arranca.
-            # La RO no sabe de 24h, cuando arranca, chupa a su velocidad nominal.
-            
-            caudal_bomba_ro_lh = (ro.produccion_nominal / 24 / ro.eficiencia) * 1.2 # Factor seguridad
-            
-            # Caudal que pasará por los filtros
-            caudal_diseno_filtros = caudal_bomba_ro_lh 
-            
-            # Si hay bypass, asumimos que se mezcla DESPUÉS de la RO en el depósito,
-            # pero si el bypass pasa por los filtros, hay que sumarlo.
-            # Asumiremos mezcla en depósito final para simplificar hidráulica.
-
-            agua_total_tratada = (litros_ro_dia / ro.eficiencia) + litros_bypass_dia
-
-            flow = {
-                "prod_ro_dia": litros_ro_dia,
-                "caudal_bypass_dia": litros_bypass_dia,
-                "prod_total_dia": consumo,
-                "blending_pct": (litros_bypass_dia / consumo) * 100,
-                "caudal_filtros": caudal_diseno_filtros
-            }
-
-            # Selección Filtros (Deben aguantar el caudal de la bomba RO)
-            cands_silex = [s for s in catalogo_silex if (s.caudal_max_m3h * 1000) >= caudal_diseno_filtros]
-            if cands_silex: 
-                cands_silex.sort(key=lambda x: x.caudal_max_m3h)
-                silex_sel = cands_silex[0]
-
-            cands_carbon = [c for c in catalogo_carbon if (c.caudal_max_m3h * 1000) >= caudal_diseno_filtros]
-            if cands_carbon:
-                cands_carbon.sort(key=lambda x: x.caudal_max_m3h)
-                carbon_sel = cands_carbon[0]
-
-            if activar_descal and dureza > 5:
-                # Carga total diaria para calcular regeneraciones
-                carga = (agua_total_tratada / 1000) * dureza
-                cands_validos, cands_fallback = [], []
-                
-                for d in catalogo_descal:
-                    # Filtro 1: Caudal instantáneo (Bomba RO)
-                    if (d.caudal_max_m3h * 1000) >= caudal_diseno_filtros:
-                        # Filtro 2: Autonomía
-                        dias = d.capacidad_intercambio / carga if carga > 0 else 99
-                        if dias >= 5.0: cands_validos.append((d, dias))
-                        else: cands_fallback.append((d, dias))
-                
-                if cands_validos:
-                    cands_validos.sort(key=lambda x: x[0].medida_botella)
-                    descal_sel = cands_validos[0]
-                elif cands_fallback:
-                    cands_fallback.sort(key=lambda x: x[0].caudal_max_m3h, reverse=True)
-                    descal_sel = cands_fallback[0]
-                    alerta_autonomia = f"⚠️ Autonomía: {descal_sel[1]:.1f} días"
-
-            kg_sal = 0
-            if descal_sel: kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
-            
-            opex_agua = (agua_total_tratada / 1000) * 365 * coste_agua
-            opex_sal = kg_sal * coste_sal
-            horas_ro_reales = litros_ro_dia / ((ro.produccion_nominal * tcf)/24)
-            opex_luz = horas_ro_reales * ro.potencia_kw * 365 * coste_luz
-            
-            opex = {"kg_sal": kg_sal, "coste_agua": opex_agua, "coste_sal": opex_sal, "coste_luz": opex_luz, "total": opex_agua + opex_sal + opex_luz}
-
-    return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_deposito_final
-
-# ==============================================================================
-# 3. INTERFAZ VISUAL
-# ==============================================================================
-
-col_logo, col_header = st.columns([1, 5])
-with col_logo:
-    try: st.image("logo.png", width=150)
-    except: st.warning("Logo?")
-with col_header:
-    st.title("AimyWater Premium V22")
-    st.markdown("**Sistema de Dimensionamiento con Acumulación Final**")
-
-st.markdown("---")
-
-with st.sidebar:
-    modo = st.radio("🎛️ MODO DE CÁLCULO", ["Planta Completa (RO)", "Solo Descalcificación"])
-    st.markdown("---")
-    
-    st.header("⚙️ Configuración")
-    with st.expander("1. Consumo y Tiempos", expanded=True):
-        consumo = st.number_input("Consumo Diario (Litros/24h)", 100, 100000, 2000, step=500)
-        horas = st.slider("Horas Disponibles para Producir", 1, 24, 20, help="Cuantas más horas, más pequeño el equipo (llenado lento).")
-        
-        if modo == "Planta Completa (RO)":
-            usar_buffer = False # Ya no lo preguntamos, es implícito en el diseño RO
-            activar_descal = st.checkbox("Incluir Descalcificador", value=True)
-        else:
-            usar_buffer = False
-            activar_descal = True
-
-    with st.expander("2. Calidad Agua", expanded=True):
-        dureza = st.number_input("Dureza (ºHf)", 0, 100, 35)
-        if modo == "Planta Completa (RO)":
-            ppm_in = st.number_input("TDS Entrada", 50, 8000, 800)
-            ppm_out = st.slider("TDS Objetivo", 0, 1000, 50)
-            temp = st.slider("Temp (ºC)", 5, 35, 15)
-        else:
-            ppm_in, ppm_out, temp = 0, 0, 25
-
-    with st.expander("3. Costes"):
-        coste_agua = st.number_input("Agua €/m3", 0.0, 10.0, 1.5)
-        coste_sal = st.number_input("Sal €/kg", 0.0, 5.0, 0.45)
-        coste_luz = st.number_input("Luz €/kWh", 0.0, 1.0, 0.20)
-    
-    st.markdown("---")
-    btn_calc = st.button("CALCULAR PROYECTO", type="primary")
-
-if btn_calc:
-    ro, descal, carbon, silex, flow, opex, alerta, v_deposito = calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal)
-    
-    # --- BLOQUE DEPÓSITO FINAL (EL REY) ---
-    st.markdown(f"""
-    <div class='deposito-box'>
-        <div class='deposito-title'>🛢️ DEPÓSITO DE AGUA TRATADA RECOMENDADO</div>
-        <div class='deposito-val'>{int(v_deposito)} Litros</div>
-        <p>Este depósito acumula la producción de {horas} horas para cubrir los picos de consumo instantáneo de la vivienda.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-
-    if modo == "Solo Descalcificación":
-        if descal:
-            st.subheader("✅ Equipo de Descalcificación (Llenado Lento)")
-            c1, c2 = st.columns([1,1])
-            with c1:
-                st.info(f"**MODELO: {descal[0].nombre}**")
-                st.write(f"- Botella: **{descal[0].medida_botella}**")
-                st.write(f"- Caudal Diseño: **{int(consumo/horas)} L/h**")
-                st.caption(f"Calculado para llenar el depósito en {horas} horas.")
-            with c2:
-                if alerta: st.warning(alerta)
-                else: st.success("Autonomía Óptima")
-                st.metric("Regeneración", f"Cada {descal[1]:.1f} días")
-                st.metric("Sal Anual", f"{int(opex['kg_sal'])} Kg")
-        else:
-            st.error("No se encontró equipo.")
-    
-    else: # MODO RO
-        if not ro:
-            st.error("❌ Sin solución viable.")
-        else:
-            st.subheader("📊 Tren de Tratamiento (Producción)")
-            
-            f1, f2, f3, f4 = st.columns(4)
-            with f1:
-                st.markdown("#### 🪨 Silex")
-                if silex: st.caption(f"{silex.medida_botella}")
-            with f2:
-                st.markdown("#### ⚫ Carbón")
-                if carbon: st.caption(f"{carbon.medida_botella}")
-            with f3:
-                st.markdown("#### 🧂 Descal")
-                if descal: st.caption(f"{descal[0].medida_botella}")
-                else: st.caption("No")
-            with f4:
-                st.markdown("#### 💧 Ósmosis")
-                st.caption(f"{ro.nombre}")
-
-            st.markdown("---")
-
-            tab_tec, tab_fin, tab_doc = st.tabs(["🛠️ Ingeniería", "💸 Financiero", "📄 Documentación"])
-            
-            with tab_tec:
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.success("Configuración RO")
-                    st.write(f"- Modelo: **{ro.nombre}**")
-                    st.write(f"- Producción 24h: **{int(flow['prod_ro_dia'])} L**")
-                    st.write(f"- Bypass: **{flow['blending_pct']:.1f}%**")
-                with c2:
-                    st.info("Configuración Filtros")
-                    st.write(f"- Caudal Bomba RO: **{int(flow['caudal_filtros'])} L/h**")
-                    if descal: st.write(f"- Descal: **{descal[0].nombre}**")
-            
-            with tab_fin:
-                c_chart, c_data = st.columns([2, 1])
-                with c_chart:
-                    data_dict = {
-                        "Concepto": ["Agua", "Sal", "Electricidad"],
-                        "Coste (€)": [opex['coste_agua'], opex['coste_sal'], opex['coste_luz']]
-                    }
-                    df = pd.DataFrame(data_dict)
-                    fig = px.pie(df, values='Coste (€)', names='Concepto', title='OPEX Anual', hole=0.4)
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                with c_data:
-                    st.metric("Total", f"{(opex['total']/365):.2f} €/día")
-
-            with tab_doc:
-                try:
-                    pdf_bytes = generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, 
-                                                  flow.get('blending_pct', 0), consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito, horas)
-                    b64 = base64.b64encode(pdf_bytes).decode()
-                    href = f'<a href="data:application/octet-stream;base64,{b64}" download="informe_aimywater.pdf" style="text-decoration:none;"><button style="background-color:#cc0000;color:white;padding:10px;border-radius:5px;border:none;cursor:pointer;width:100%;">📥 Descargar Informe PDF</button></a>'
-                    st.markdown(href, unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"Error PDF: {e}")
-
-else:
-    st.info("👈 Configura tu proyecto.")
+            if c
