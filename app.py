@@ -5,10 +5,10 @@ import plotly.express as px
 import pandas as pd
 
 # ==============================================================================
-# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS
+# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS (V31 CLEAN COST)
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater Pro",
+    page_title="AimyWater V31",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -19,70 +19,66 @@ def local_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
         
+        /* RESET TOTAL */
         html, body, [class*="css"], [data-testid="stAppViewContainer"] {
             font-family: 'Outfit', sans-serif !important;
-            background-color: #ffffff !important;
+            background-color: #f8fafc !important;
             color: #1e293b !important;
         }
 
+        /* SIDEBAR */
         section[data-testid="stSidebar"] {
-            background-color: #f8fafc !important;
+            background-color: #ffffff !important;
             border-right: 1px solid #e2e8f0;
         }
         
-        h1, h2, h3, h4, h5, h6 { color: #0f172a !important; font-weight: 800 !important; }
-        p, li, span, label, div { color: #334155 !important; }
-
+        /* TARJETAS */
         div[data-testid="stMetric"] {
             background-color: #ffffff !important;
             border: 1px solid #e2e8f0 !important;
             padding: 15px !important;
             border-radius: 12px !important;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
         }
         
-        div[data-testid="stMetricLabel"] p { color: #64748b !important; font-size: 0.9rem !important; font-weight: 600 !important; }
-        div[data-testid="stMetricValue"] div { color: #0284c7 !important; font-size: 1.6rem !important; font-weight: 800 !important; }
+        /* TEXTOS */
+        h1, h2, h3 { color: #0f172a !important; font-weight: 800 !important; }
+        div[data-testid="stMetricLabel"] { color: #64748b !important; }
+        div[data-testid="stMetricValue"] { color: #003366 !important; }
 
+        /* BOTONES */
         div.stButton > button:first-child {
-            background-color: #0284c7 !important;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
             color: white !important;
-            border: none !important;
-            padding: 0.6rem 1.2rem !important;
-            font-weight: 700 !important;
             border-radius: 8px !important;
-            transition: background-color 0.2s;
+            border: none !important;
+            font-weight: 600 !important;
         }
-        div.stButton > button:first-child:hover {
-            background-color: #0369a1 !important;
-            color: white !important;
-        }
-        div.stButton > button:first-child p { color: white !important; }
 
+        /* DEPÓSITOS */
         .tank-container {
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
             border: 1px solid;
+            background-color: white;
         }
-        .tank-final { background-color: #eff6ff !important; border-color: #bfdbfe !important; }
-        .tank-intermedio { background-color: #f0fdf4 !important; border-color: #bbf7d0 !important; }
+        .tank-final { border-color: #bfdbfe !important; border-left: 5px solid #2563eb !important; }
+        .tank-intermedio { border-color: #bbf7d0 !important; border-left: 5px solid #16a34a !important; }
         
-        .tank-header { color: #1e3a8a !important; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; }
-        .tank-number { color: #172554 !important; font-weight: 800; font-size: 2rem; margin: 10px 0; }
-        .tank-desc { color: #475569 !important; font-size: 0.9rem; }
-
-        button[data-baseweb="tab"] { font-weight: 600 !important; }
-        button[data-baseweb="tab"][aria-selected="true"] { background-color: white !important; border-bottom: 3px solid #0284c7 !important; }
+        .tank-val { font-size: 1.8rem; font-weight: 800; color: #0f172a; }
+        .tank-label { font-size: 0.85rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
         
-        /* Estilo Login */
-        .login-box {
-            padding: 2rem;
-            border-radius: 10px;
-            background: white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 400px;
-            margin: auto;
+        /* CAJA AVISO PRESIÓN */
+        .warning-box {
+            background-color: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            font-weight: 500;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -90,55 +86,32 @@ def local_css():
 local_css()
 
 # ==============================================================================
-# SISTEMA DE SEGURIDAD (LOGIN)
+# SEGURIDAD (LOGIN)
 # ==============================================================================
-
 def check_password():
-    """Retorna True si el usuario se loguea correctamente."""
-
-    if "password_correct" not in st.session_state:
-        st.session_state["password_correct"] = False
-
-    if st.session_state["password_correct"]:
-        return True
-
-    # Interfaz de Login
+    if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
+    if st.session_state["password_correct"]: return True
+    
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        st.markdown("### 🔒 Acceso AimyWater")
-        try:
-            st.image("logo.png", width=150)
+        st.markdown("### 🔐 Acceso Ingeniero")
+        try: st.image("logo.png", width=150)
         except: pass
-        
-        st.info("Introduce tus credenciales para acceder a la ingeniería.")
-        
         user = st.text_input("Usuario")
         pwd = st.text_input("Contraseña", type="password")
-        
         if st.button("ENTRAR", type="primary"):
-            # Verifica contra los secretos de la nube
-            try:
-                # Comprobamos si el usuario existe y la contraseña coincide
-                if user in st.secrets["users"] and pwd == st.secrets["users"][user]:
-                    st.session_state["password_correct"] = True
-                    st.rerun()
-                else:
-                    st.error("❌ Usuario o contraseña incorrectos")
-            except Exception as e:
-                # Fallback por si no están configurados los secretos aún
-                if user == "admin" and pwd == "aimywater2025":
-                    st.session_state["password_correct"] = True
-                    st.rerun()
-                else:
-                    st.error("⚠️ Configura los secretos o usa credenciales de emergencia.")
-
+            # Si no hay secrets configurados, usa admin/aimywater2025 por defecto para no bloquearte
+            users = st.secrets.get("users", {"admin": "aimywater2025"})
+            if user in users and pwd == users[user]:
+                st.session_state["password_correct"] = True
+                st.rerun()
+            else: st.error("Acceso Denegado")
     return False
 
-if not check_password():
-    st.stop() # DETIENE LA EJECUCIÓN AQUÍ SI NO ESTÁ LOGUEADO
+if not check_password(): st.stop()
 
 # ==============================================================================
-# A PARTIR DE AQUÍ: EL CÓDIGO DE LA CALCULADORA (SOLO VISIBLE SI LOGUEADO)
+# 1. BASE DE DATOS
 # ==============================================================================
 
 class EquipoRO:
@@ -151,11 +124,12 @@ class EquipoRO:
         self.potencia_kw = potencia_kw
 
 class PreTratamiento:
-    def __init__(self, tipo_equipo, nombre, medida_botella, caudal_max_m3h, capacidad_intercambio=0, sal_kg=0, tipo_valvula=""):
+    def __init__(self, tipo_equipo, nombre, medida_botella, caudal_max_m3h, caudal_contralavado_m3h, capacidad_intercambio=0, sal_kg=0, tipo_valvula=""):
         self.tipo_equipo = tipo_equipo 
         self.nombre = nombre
         self.medida_botella = medida_botella 
         self.caudal_max_m3h = caudal_max_m3h
+        self.caudal_contralavado_m3h = caudal_contralavado_m3h
         self.capacidad_intercambio = capacidad_intercambio 
         self.sal_kg = sal_kg 
         self.tipo_valvula = tipo_valvula 
@@ -173,117 +147,106 @@ catalogo_ro = [
 ]
 
 catalogo_descal = [
-    PreTratamiento("Descalcificador", "BI BLOC 30L IMPRESSION", "10x35", 1.8, 192, 4.5, "Simplex"),
-    PreTratamiento("Descalcificador", "BI BLOC 60L IMPRESSION", "12x48", 3.6, 384, 9.0, "Simplex"),
-    PreTratamiento("Descalcificador", "BI BLOC 100L IMPRESSION", "14x65", 6.0, 640, 15.0, "Simplex"),
-    PreTratamiento("Descalcificador", "TWIN 40L DF IMPRESSION", "10x44", 2.4, 256, 6.0, "Duplex"),
-    PreTratamiento("Descalcificador", "TWIN 100L DF IMPRESSION", "14x65", 6.0, 640, 15.0, "Duplex"),
-    PreTratamiento("Descalcificador", "TWIN 140L DF IMPRESSION", "16x65", 6.0, 896, 25.0, "Duplex"),
-    PreTratamiento("Descalcificador", "DUPLEX 300L IMPRESSION 1.5\"", "24x69", 6.5, 1800, 45.0, "Duplex"),
+    PreTratamiento("Descalcificador", "BI BLOC 30L", "10x35", 1.8, 2.0, 192, 4.5, "Simplex"),
+    PreTratamiento("Descalcificador", "BI BLOC 60L", "12x48", 3.6, 3.5, 384, 9.0, "Simplex"),
+    PreTratamiento("Descalcificador", "BI BLOC 100L", "14x65", 6.0, 5.0, 640, 15.0, "Simplex"),
+    PreTratamiento("Descalcificador", "TWIN 40L DF", "10x44", 2.4, 2.5, 256, 6.0, "Duplex"),
+    PreTratamiento("Descalcificador", "TWIN 100L DF", "14x65", 6.0, 5.0, 640, 15.0, "Duplex"),
+    PreTratamiento("Descalcificador", "TWIN 140L DF", "16x65", 6.0, 6.0, 896, 25.0, "Duplex"),
+    PreTratamiento("Descalcificador", "DUPLEX 300L", "24x69", 6.5, 9.0, 1800, 45.0, "Duplex"),
 ]
 
 catalogo_carbon = [
-    PreTratamiento("Carbon", "DEC 14KG/30L IMPRESSION 1\"", "10x35", 0.38, 0, 0, "Impression 1\""),
-    PreTratamiento("Carbon", "DEC 22KG/45L IMPRESSION 1\"", "10x54", 0.72, 0, 0, "Impression 1\""),
-    PreTratamiento("Carbon", "DEC 28KG/60L IMPRESSION 1\"", "12x48", 0.80, 0, 0, "Impression 1\""),
-    PreTratamiento("Carbon", "DEC 37KG/75L IMPRESSION 1\"", "13x54", 1.10, 0, 0, "Impression 1\""),
-    PreTratamiento("Carbon", "DEC 90KG IMPRESSION 1 1/4\"", "18x65", 2.68, 0, 0, "Impression 1 1/4\""),
+    PreTratamiento("Carbon", "DEC 30L", "10x35", 0.38, 2.5, 0, 0, "1\""),
+    PreTratamiento("Carbon", "DEC 45L", "10x54", 0.72, 3.0, 0, 0, "1\""),
+    PreTratamiento("Carbon", "DEC 60L", "12x48", 0.80, 4.0, 0, 0, "1\""),
+    PreTratamiento("Carbon", "DEC 75L", "13x54", 1.10, 5.0, 0, 0, "1\""),
+    PreTratamiento("Carbon", "DEC 90KG", "18x65", 2.68, 8.0, 0, 0, "1.25\""),
 ]
 
 catalogo_silex = [
-    PreTratamiento("Silex", "FILTRO SILEX 10x35 IMPRESSION 1\"", "10x35", 0.8, 0, 0, "Impression 1\""),
-    PreTratamiento("Silex", "FILTRO SILEX 10x44 IMPRESSION 1\"", "10x44", 0.8, 0, 0, "Impression 1\""),
-    PreTratamiento("Silex", "FILTRO SILEX 12x48 IMPRESSION 1\"", "12x48", 1.1, 0, 0, "Impression 1\""),
-    PreTratamiento("Silex", "FILTRO SILEX 18x65 IMPRESSION 1.25\"", "18x65", 2.6, 0, 0, "Impression 1 1/4\""),
-    PreTratamiento("Silex", "FILTRO SILEX 21x60 IMPRESSION 1.25\"", "21x60", 3.6, 0, 0, "Impression 1 1/4\""),
-    PreTratamiento("Silex", "FILTRO SILEX 24x69 IMPRESSION 1.25\"", "24x69", 4.4, 0, 0, "Impression 1 1/4\""),
-    PreTratamiento("Silex", "FILTRO SILEX 30x72 IMPRESSION 1.5\"", "30x72", 7.0, 0, 0, "Impression 1 1/2\""),
-    PreTratamiento("Silex", "FILTRO SILEX 36x72 IMPRESSION 2\"", "36x72", 10.0, 0, 0, "Impression 2\""),
+    PreTratamiento("Silex", "SIL 10x35", "10x35", 0.8, 3.0, 0, 0, "1\""),
+    PreTratamiento("Silex", "SIL 10x44", "10x44", 0.8, 3.0, 0, 0, "1\""),
+    PreTratamiento("Silex", "SIL 12x48", "12x48", 1.1, 4.5, 0, 0, "1\""),
+    PreTratamiento("Silex", "SIL 18x65", "18x65", 2.6, 9.0, 0, 0, "1.25\""),
+    PreTratamiento("Silex", "SIL 21x60", "21x60", 3.6, 12.0, 0, 0, "1.25\""),
+    PreTratamiento("Silex", "SIL 24x69", "24x69", 4.4, 15.0, 0, 0, "1.25\""),
+    PreTratamiento("Silex", "SIL 30x72", "30x72", 7.0, 22.0, 0, 0, "1.5\""),
+    PreTratamiento("Silex", "SIL 36x72", "36x72", 10.0, 30.0, 0, 0, "2\""),
 ]
 
 # ==============================================================================
-# 2. GENERADOR PDF
+# 2. GENERADOR PDF (TÉCNICO)
 # ==============================================================================
 
-def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito_final, v_buffer_intermedio, horas_trabajo, is_manual_final, is_manual_buffer):
+def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito_final, v_buffer_intermedio, horas_trabajo, caudal_acom_nec):
     pdf = FPDF()
     pdf.add_page()
-    
     try: pdf.image('logo.png', 10, 8, 33)
     except: pass
     pdf.ln(20)
 
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "PROYECTO TÉCNICO AIMYWATER", 0, 1, 'C')
+    pdf.cell(0, 10, "INFORME TÉCNICO AIMYWATER", 0, 1, 'C')
     pdf.ln(5)
 
-    # 1. BASES
-    pdf.set_fill_color(240, 248, 255) 
+    # BASES
+    pdf.set_fill_color(240, 248, 255)
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, "1. BASES DE DISEÑO", 1, 1, 'L', 1)
     pdf.set_font("Arial", size=10)
-    pdf.cell(95, 8, f"Consumo Diario: {consumo} L/dia", 1)
-    pdf.cell(95, 8, f"Horas Produccion: {horas_trabajo} h/dia", 1, 1)
+    pdf.cell(95, 8, f"Consumo: {consumo} L/dia", 1)
+    pdf.cell(95, 8, f"Produccion: {horas_trabajo} h/dia", 1, 1)
     pdf.cell(95, 8, f"Dureza: {dureza} Hf", 1)
     if modo == "Planta Completa (RO)":
-        pdf.cell(95, 8, f"TDS Entrada: {ppm_in} ppm", 1, 1)
+        pdf.cell(95, 8, f"Salinidad In: {ppm_in} ppm", 1, 1)
     else:
         pdf.cell(95, 8, "", 1, 1)
     pdf.ln(5)
 
-    # 2. EQUIPOS
+    # REQUISITOS INSTALACIÓN
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, "2. TREN DE TRATAMIENTO", 1, 1, 'L', 1)
+    pdf.set_text_color(200, 0, 0)
+    pdf.cell(0, 8, "2. REQUISITOS CRÍTICOS DE INSTALACIÓN", 1, 1, 'L', 0)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", size=10)
+    pdf.multi_cell(0, 6, f"IMPORTANTE: La acometida de agua bruta debe garantizar un caudal punta minimo de {int(caudal_acom_nec)} L/h a 2.5 bar para el contralavado de filtros.")
+    pdf.ln(5)
+
+    # EQUIPOS
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 8, "3. EQUIPOS SELECCIONADOS", 1, 1, 'L', 1)
     pdf.set_font("Arial", size=10)
 
     if modo == "Solo Descalcificación":
         pdf.ln(2)
         if descal:
-            pdf.cell(0, 8, f"EQUIPO: {descal[0].nombre}", 0, 1)
+            pdf.cell(0, 8, f"DESCAL: {descal[0].nombre} ({descal[0].medida_botella})", 0, 1)
             pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Botella: {descal[0].medida_botella} | Valvula: {descal[0].tipo_valvula}", 0, 1)
-            pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Caudal Llenado: {int(consumo/horas_trabajo)} L/h", 0, 1)
-            pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias", 0, 1)
-            
+            pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias | Valvula: {descal[0].tipo_valvula}", 0, 1)
             if alerta:
-                alerta_clean = alerta.replace("⚠️", "ATENCION:")
-                pdf.set_text_color(200,0,0)
+                alerta_clean = alerta.replace("⚠️", "AVISO:")
                 pdf.cell(10, 8, "", 0, 0)
-                pdf.cell(0, 6, f"NOTA: {alerta_clean}", 0, 1)
-                pdf.set_text_color(0,0,0)
+                pdf.cell(0, 6, alerta_clean, 0, 1)
     else: 
-        if silex: pdf.cell(0, 8, f"A. FILTRACION: {silex.nombre} ({silex.medida_botella})", 0, 1)
-        if carbon: pdf.cell(0, 8, f"B. DECLORACION: {carbon.nombre} ({carbon.medida_botella})", 0, 1)
+        if silex: pdf.cell(0, 8, f"A. SILEX: {silex.nombre} ({silex.medida_botella})", 0, 1)
+        if carbon: pdf.cell(0, 8, f"B. CARBON: {carbon.nombre} ({carbon.medida_botella})", 0, 1)
         
         if v_buffer_intermedio > 0:
-            pdf.ln(2)
-            pdf.cell(0, 8, f"C. ACUMULACION INTERMEDIA (PRE-RO)", 0, 1)
-            nota_buf = "(Manual)" if is_manual_buffer else "(Auto)"
-            pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Volumen: {int(v_buffer_intermedio)} Litros {nota_buf}", 0, 1)
+            pdf.cell(0, 8, f"C. BUFFER: {int(v_buffer_intermedio)} Litros (Recomendado)", 0, 1)
 
         if descal:
-            pdf.ln(2)
-            pdf.cell(0, 8, f"D. DESCALCIFICADOR: {descal[0].nombre}", 0, 1)
-            pdf.cell(10, 6, "", 0, 0)
-            pdf.cell(0, 6, f"Regeneracion cada {descal[1]:.1f} dias", 0, 1)
+            pdf.cell(0, 8, f"D. DESCAL: {descal[0].nombre} ({descal[0].medida_botella})", 0, 1)
         
         if ro:
-            pdf.ln(2)
-            pdf.cell(0, 8, f"E. OSMOSIS INVERSA: {ro.nombre}", 0, 1)
-            pdf.cell(10, 6, "", 0, 0)
-            pdf.cell(0, 6, f"Produccion Nominal: {ro.produccion_nominal} L/dia", 0, 1)
+            pdf.cell(0, 8, f"E. OSMOSIS: {ro.nombre} ({ro.produccion_nominal} L/dia)", 0, 1)
 
-    # 3. DEPÓSITO FINAL
+    # DEPÓSITO FINAL
     pdf.ln(5)
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, "3. ALMACENAMIENTO FINAL (PRODUCTO)", 1, 1, 'L', 1)
+    pdf.cell(0, 8, "4. ACUMULACIÓN FINAL", 1, 1, 'L', 1)
     pdf.set_font("Arial", size=10)
-    
-    nota_fin = "(Manual)" if is_manual_final else "(Auto 75% Consumo)"
-    pdf.cell(0, 8, f"VOLUMEN DEPÓSITO: {int(v_deposito_final)} LITROS {nota_fin}", 0, 1)
+    pdf.cell(0, 8, f"VOLUMEN RECOMENDADO: {int(v_deposito_final)} LITROS", 0, 1)
 
     return pdf.output(dest='S').encode('latin-1')
 
@@ -296,6 +259,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
     ro_sel, descal_sel, carbon_sel, silex_sel = None, None, None, None
     flow, opex = {}, {}
     alerta_autonomia = None
+    caudal_acometida_necesario = 0 
     
     if manual_final_l > 0:
         v_deposito_final = manual_final_l
@@ -327,7 +291,11 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                 alerta_autonomia = f"⚠️ Autonomía: {descal_sel[1]:.1f} días"
 
         kg_sal = 0
-        if descal_sel: kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
+        if descal_sel: 
+            kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
+            caudal_acometida_necesario = descal_sel[0].caudal_contralavado_m3h * 1000
+            
+        # OPEX SIN MANTENIMIENTO
         opex = {"kg_sal": kg_sal, "coste_sal": kg_sal * coste_sal, "total": kg_sal * coste_sal}
 
     else:
@@ -353,6 +321,7 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
         if ro_sel:
             agua_entrada_ro = litros_ro_dia / ro_sel.eficiencia
             agua_total = agua_entrada_ro + litros_bypass_dia
+            
             caudal_bomba_ro_lh = (ro_sel.produccion_nominal / 24 / ro_sel.eficiencia) * 1.5 
             
             if usar_buffer:
@@ -402,17 +371,24 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
                     descal_sel = cands_fallback[0]
                     alerta_autonomia = f"⚠️ Autonomía: {descal_sel[1]:.1f} días"
 
+            max_wash = 0
+            if silex_sel: max_wash = max(max_wash, silex_sel.caudal_contralavado_m3h)
+            if carbon_sel: max_wash = max(max_wash, carbon_sel.caudal_contralavado_m3h)
+            if descal_sel: max_wash = max(max_wash, descal_sel[0].caudal_contralavado_m3h)
+            caudal_acometida_necesario = max_wash * 1000
+
             kg_sal = 0
             if descal_sel: kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
             
             opex_agua = (agua_total / 1000) * 365 * coste_agua
             opex_sal = kg_sal * coste_sal
-            horas_ro_reales = litros_ro_dia / ((ro.produccion_nominal * tcf)/24)
-            opex_luz = horas_ro_reales * ro.potencia_kw * 365 * coste_luz
+            horas_ro_reales = litros_ro_dia / ((ro_sel.produccion_nominal * tcf)/24)
+            opex_luz = horas_ro_reales * ro_sel.potencia_kw * 365 * coste_luz
             
+            # OPEX SIN MANTENIMIENTO
             opex = {"kg_sal": kg_sal, "coste_agua": opex_agua, "coste_sal": opex_sal, "coste_luz": opex_luz, "total": opex_agua + opex_sal + opex_luz}
 
-    return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_buffer_intermedio, v_deposito_final, is_manual_final, is_manual_buffer
+    return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_buffer_intermedio, v_deposito_final, is_manual_final, is_manual_buffer, caudal_acometida_necesario
 
 # ==============================================================================
 # 3. INTERFAZ VISUAL
@@ -424,17 +400,11 @@ with c_head1:
     except: st.warning("Logo?")
 with c_head2:
     st.markdown("## 💧 AimyWater Engineering Suite")
-    st.caption("Plataforma Integral de Dimensionamiento v29")
+    st.caption("Plataforma Integral de Dimensionamiento v31")
 
 st.markdown("---")
 
 with st.sidebar:
-    st.markdown(f"👤 **Usuario:** {st.secrets.get('users', {}).keys()}") # Muestra usuario si quieres
-    if st.button("Cerrar Sesión"):
-        st.session_state["password_correct"] = False
-        st.rerun()
-    st.markdown("---")
-    
     modo = st.radio("🎛️ MODO DE DISEÑO", ["Planta Completa (RO)", "Solo Descalcificación"])
     st.markdown("---")
     
@@ -443,6 +413,7 @@ with st.sidebar:
     with st.expander("1. Hidráulica", expanded=True):
         consumo = st.number_input("Consumo Diario (Litros/24h)", 100, 100000, 2000, step=500)
         horas = st.slider("Horas Trabajo Planta", 1, 24, 20)
+        if horas > 20: st.caption("⚠️ Poca ventana para lavados")
         
         if modo == "Planta Completa (RO)":
             usar_buffer = st.checkbox("Usar Depósito Intermedio (Pre-RO)", value=True)
@@ -477,30 +448,37 @@ with st.sidebar:
 
 # --- RESULTADOS ---
 if btn_calc:
-    ro, descal, carbon, silex, flow, opex, alerta, v_buffer, v_producto, is_man_final, is_man_buf = calcular_logica(
+    ro, descal, carbon, silex, flow, opex, alerta, v_buffer, v_producto, is_man_final, is_man_buf, caudal_acom = calcular_logica(
         modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_agua, coste_sal, coste_luz, usar_buffer, activar_descal, man_final, man_buffer
     )
     
+    # VISUALIZACIÓN DEPÓSITOS
     col_tanks = st.columns(2)
-    
     if v_buffer > 0:
         with col_tanks[0]:
             tag = "PERSONALIZADO" if is_man_buf else "AUTO"
             st.markdown(f"""
             <div class='tank-container tank-intermedio'>
-                <div class='tank-header'>🛡️ DEPÓSITO INTERMEDIO</div>
-                <div class='tank-number'>{int(v_buffer)} L</div>
-                <div class='tank-desc'>{tag} • Pre-Ósmosis</div>
+                <div class='tank-label'>🛡️ DEPÓSITO INTERMEDIO</div>
+                <div class='tank-val'>{int(v_buffer)} L</div>
+                <div class='tank-label'>{tag}</div>
             </div>""", unsafe_allow_html=True)
     
     with col_tanks[1] if v_buffer > 0 else col_tanks[0]:
         tag_fin = "PERSONALIZADO" if is_man_final else "AUTO"
         st.markdown(f"""
         <div class='tank-container tank-final'>
-            <div class='tank-header'>🛢️ DEPÓSITO FINAL</div>
-            <div class='tank-number'>{int(v_producto)} L</div>
-            <div class='tank-desc'>{tag_fin} • Agua Producto</div>
+            <div class='tank-label'>🛢️ DEPÓSITO FINAL</div>
+            <div class='tank-val'>{int(v_producto)} L</div>
+            <div class='tank-label'>{tag_fin}</div>
         </div>""", unsafe_allow_html=True)
+    
+    # AVISO DE INSTALACIÓN
+    st.markdown(f"""
+    <div class='warning-box'>
+        ⚠️ <b>REQUISITO DE INSTALACIÓN:</b> La acometida de agua bruta debe garantizar un caudal mínimo de <b>{int(caudal_acom)} L/h</b> a 2.5 bar para realizar los contralavados de los filtros correctamente.
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
 
@@ -520,7 +498,7 @@ if btn_calc:
     
     else: # MODO RO
         if not ro:
-            st.error("❌ No se encontró solución viable (Revisar salinidad o caudal).")
+            st.error("❌ No se encontró solución viable.")
         else:
             st.subheader("📊 Tren de Tratamiento")
             
@@ -533,18 +511,18 @@ if btn_calc:
             tab_tec, tab_fin, tab_doc = st.tabs(["🛠️ Ingeniería", "💸 Financiero", "📄 Documentación"])
             
             with tab_tec:
-                c_tec1, c_tec2 = st.columns(2)
-                with c_tec1:
-                    st.markdown("**Parámetros de Diseño**")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("**Caudales de Diseño**")
                     st.write(f"Producción RO: **{int(flow['prod_ro_dia'])} L/día**")
-                    st.write(f"Mezcla (Bypass): **{flow['blending_pct']:.1f}%**")
-                with c_tec2:
-                    st.markdown("**Caudales**")
-                    st.write(f"Caudal Diseño Filtros: **{int(flow['caudal_filtros'])} L/h**")
+                    st.write(f"Bypass: **{flow['blending_pct']:.1f}%**")
+                with c2:
+                    st.markdown("**Lavados**")
+                    st.write(f"Caudal Punta Lavado: **{int(caudal_acom)} L/h**")
             
             with tab_fin:
-                c_fin1, c_fin2 = st.columns([2, 1])
-                with c_fin1:
+                c1, c2 = st.columns([2, 1])
+                with c1:
                     data = {
                         "Concepto": ["Agua", "Sal", "Luz"],
                         "Coste": [opex['coste_agua'], opex['coste_sal'], opex['coste_luz']]
@@ -552,14 +530,14 @@ if btn_calc:
                     fig = px.pie(pd.DataFrame(data), values='Coste', names='Concepto', hole=0.5)
                     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig, use_container_width=True)
-                with c_fin2:
+                with c2:
                     st.metric("OPEX Diario", f"{(opex['total']/365):.2f} €")
 
             with tab_doc:
                 try:
                     pdf_bytes = generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, 
                                                   flow.get('blending_pct', 0), consumo, ppm_in, ppm_out, dureza, alerta, opex, 
-                                                  v_producto, v_buffer, horas, is_man_final, is_man_buf)
+                                                  v_producto, v_buffer, horas, is_man_final, is_man_buf, caudal_acom)
                     b64 = base64.b64encode(pdf_bytes).decode()
                     href = f'<a href="data:application/octet-stream;base64,{b64}" download="informe_aimywater.pdf" style="text-decoration:none;"><button style="background-color:#0284c7;color:white;padding:12px;border-radius:8px;border:none;cursor:pointer;width:100%;font-weight:bold;">📥 Descargar Informe PDF</button></a>'
                     st.markdown(href, unsafe_allow_html=True)
