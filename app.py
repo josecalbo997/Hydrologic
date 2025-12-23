@@ -59,7 +59,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 1. SEGURIDAD
+# 1. SEGURIDAD (LOGIN DIRECTO - SIN ERRORES)
 # ==============================================================================
 def check_auth():
     if "auth" not in st.session_state: st.session_state["auth"] = False
@@ -68,18 +68,25 @@ def check_auth():
     c1,c2,c3 = st.columns([1,2,1])
     with c2:
         st.markdown("### 🔐 AimyWater Engineering")
+        
+        # Credenciales maestras (Cámbialas aquí si quieres)
+        USUARIO_MAESTRO = "admin"
+        CLAVE_MAESTRA = "aimywater2025"
+        
+        user = st.text_input("Usuario")
         pwd = st.text_input("Access Key", type="password")
-        if st.button("LOGIN"):
-            # Fallback seguro si no hay secrets
-            users = st.secrets.get("users", {"admin": "aimywater2025"})
-            if "admin" in users and pwd == users["admin"]:
+        
+        if st.button("LOGIN", type="primary"):
+            # Comprobación directa (Infalible)
+            if user == USUARIO_MAESTRO and pwd == CLAVE_MAESTRA:
                 st.session_state["auth"] = True
                 st.rerun()
-            else: st.error("Acceso denegado")
+            else:
+                st.error("❌ Acceso denegado. Revisa mayúsculas/minúsculas.")
+                
     return False
 
 if not check_auth(): st.stop()
-
 # ==============================================================================
 # 2. LÓGICA DE NEGOCIO (MOTORES V25)
 # ==============================================================================
