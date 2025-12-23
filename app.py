@@ -5,10 +5,10 @@ import plotly.express as px
 import pandas as pd
 
 # ==============================================================================
-# 0. CONFIGURACIÓN E INYECCIÓN DE ESTILOS (V31 CLEAN COST)
+# 0. CONFIGURACIÓN Y ESTILOS V32 (CORRECCIÓN TOTAL DE COLORES)
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater V31",
+    page_title="AimyWater V32",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -17,69 +17,134 @@ st.set_page_config(
 def local_css():
     st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+        /* --- FUENTE Y RESETEO GLOBAL --- */
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
         
-        /* RESET TOTAL */
-        html, body, [class*="css"], [data-testid="stAppViewContainer"] {
-            font-family: 'Outfit', sans-serif !important;
-            background-color: #f8fafc !important;
-            color: #1e293b !important;
+        html, body, [class*="css"] {
+            font-family: 'Manrope', sans-serif;
         }
 
-        /* SIDEBAR */
+        /* --- FORZAR MODO CLARO (LIGHT MODE OVERRIDE) --- */
+        /* Fondo Principal */
+        .stApp, [data-testid="stAppViewContainer"] {
+            background-color: #f8fafc !important; /* Gris muy claro */
+        }
+        
+        /* Fondo Sidebar */
         section[data-testid="stSidebar"] {
             background-color: #ffffff !important;
             border-right: 1px solid #e2e8f0;
         }
+
+        /* --- TEXTOS (COLOR FORZADO A OSCURO) --- */
+        /* Esto arregla que no se vean las letras */
+        h1, h2, h3, h4, h5, h6 {
+            color: #0f172a !important; /* Azul casi negro */
+            font-weight: 800 !important;
+        }
         
-        /* TARJETAS */
+        p, li, span, div {
+            color: #334155 !important; /* Gris oscuro */
+        }
+        
+        /* Etiquetas de los Inputs (Donde dice "Consumo", "Dureza", etc) */
+        label, .stNumberInput label, .stSlider label, .stRadio label, .stCheckbox label {
+            color: #1e293b !important; /* Negro azulado */
+            font-weight: 700 !important;
+            font-size: 0.95rem !important;
+        }
+        
+        /* Texto dentro de los inputs */
+        input {
+            color: #000000 !important;
+        }
+
+        /* --- TARJETAS MÉTRICAS (KPIs) --- */
         div[data-testid="stMetric"] {
             background-color: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
+            border: 1px solid #cbd5e1 !important;
             padding: 15px !important;
             border-radius: 12px !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
         }
         
-        /* TEXTOS */
-        h1, h2, h3 { color: #0f172a !important; font-weight: 800 !important; }
-        div[data-testid="stMetricLabel"] { color: #64748b !important; }
-        div[data-testid="stMetricValue"] { color: #003366 !important; }
-
-        /* BOTONES */
-        div.stButton > button:first-child {
-            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
-            color: white !important;
-            border-radius: 8px !important;
-            border: none !important;
-            font-weight: 600 !important;
+        div[data-testid="stMetricLabel"] {
+            color: #64748b !important; /* Gris medio */
+            font-size: 0.9rem !important;
+        }
+        div[data-testid="stMetricValue"] {
+            color: #0284c7 !important; /* Azul AimyWater */
+            font-size: 1.8rem !important;
+            font-weight: 800 !important;
         }
 
-        /* DEPÓSITOS */
+        /* --- BOTONES --- */
+        div.stButton > button:first-child {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 0.75rem 1.5rem !important;
+            font-weight: 700 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+        }
+        div.stButton > button:first-child:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(2, 132, 199, 0.4) !important;
+        }
+        div.stButton > button:first-child p {
+            color: #ffffff !important; /* Asegurar texto blanco en botón */
+        }
+
+        /* --- TARJETAS DE DEPÓSITOS (HTML) --- */
         .tank-container {
+            background-color: #ffffff;
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
-            border: 1px solid;
-            background-color: white;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            /* Evitar superposición */
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-        .tank-final { border-color: #bfdbfe !important; border-left: 5px solid #2563eb !important; }
-        .tank-intermedio { border-color: #bbf7d0 !important; border-left: 5px solid #16a34a !important; }
+        .tank-final {
+            background-color: #eff6ff !important;
+            border-bottom: 6px solid #2563eb !important;
+        }
+        .tank-intermedio {
+            background-color: #f0fdf4 !important;
+            border-bottom: 6px solid #16a34a !important;
+        }
         
-        .tank-val { font-size: 1.8rem; font-weight: 800; color: #0f172a; }
-        .tank-label { font-size: 0.85rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        .tank-header { color: #1e3a8a !important; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; }
+        .tank-number { color: #172554 !important; font-weight: 900; font-size: 2.2rem; margin: 5px 0; }
+        .tank-desc { color: #475569 !important; font-size: 0.85rem; font-weight: 600; }
+
+        /* --- TABS (PESTAÑAS) --- */
+        button[data-baseweb="tab"] {
+            color: #475569 !important;
+            font-weight: 600 !important;
+            background-color: transparent !important;
+        }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #0284c7 !important;
+            border-bottom-color: #0284c7 !important;
+            background-color: #ffffff !important;
+        }
         
-        /* CAJA AVISO PRESIÓN */
+        /* --- AVISOS --- */
         .warning-box {
-            background-color: #fffbeb;
-            border: 1px solid #fcd34d;
-            color: #92400e;
+            background-color: #fffbeb !important;
+            border: 1px solid #fcd34d !important;
             padding: 15px;
             border-radius: 8px;
-            font-size: 0.95rem;
-            margin-top: 15px;
-            font-weight: 500;
         }
+        .warning-text { color: #92400e !important; font-weight: 600; }
+
     </style>
     """, unsafe_allow_html=True)
 
@@ -100,7 +165,6 @@ def check_password():
         user = st.text_input("Usuario")
         pwd = st.text_input("Contraseña", type="password")
         if st.button("ENTRAR", type="primary"):
-            # Si no hay secrets configurados, usa admin/aimywater2025 por defecto para no bloquearte
             users = st.secrets.get("users", {"admin": "aimywater2025"})
             if user in users and pwd == users[user]:
                 st.session_state["password_correct"] = True
@@ -176,7 +240,7 @@ catalogo_silex = [
 ]
 
 # ==============================================================================
-# 2. GENERADOR PDF (TÉCNICO)
+# 2. GENERADOR PDF
 # ==============================================================================
 
 def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, consumo, ppm_in, ppm_out, dureza, alerta, opex, v_deposito_final, v_buffer_intermedio, horas_trabajo, caudal_acom_nec):
@@ -204,13 +268,13 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
         pdf.cell(95, 8, "", 1, 1)
     pdf.ln(5)
 
-    # REQUISITOS INSTALACIÓN
+    # REQUISITOS
     pdf.set_font("Arial", 'B', 11)
     pdf.set_text_color(200, 0, 0)
-    pdf.cell(0, 8, "2. REQUISITOS CRÍTICOS DE INSTALACIÓN", 1, 1, 'L', 0)
+    pdf.cell(0, 8, "2. REQUISITOS INSTALACIÓN", 1, 1, 'L', 0)
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", size=10)
-    pdf.multi_cell(0, 6, f"IMPORTANTE: La acometida de agua bruta debe garantizar un caudal punta minimo de {int(caudal_acom_nec)} L/h a 2.5 bar para el contralavado de filtros.")
+    pdf.multi_cell(0, 6, f"Acometida requerida: {int(caudal_acom_nec)} L/h a 2.5 bar (para contralavados).")
     pdf.ln(5)
 
     # EQUIPOS
@@ -223,17 +287,19 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
         if descal:
             pdf.cell(0, 8, f"DESCAL: {descal[0].nombre} ({descal[0].medida_botella})", 0, 1)
             pdf.cell(10, 8, "", 0, 0)
-            pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias | Valvula: {descal[0].tipo_valvula}", 0, 1)
+            pdf.cell(0, 6, f"Autonomia: {descal[1]:.1f} dias", 0, 1)
             if alerta:
                 alerta_clean = alerta.replace("⚠️", "AVISO:")
                 pdf.cell(10, 8, "", 0, 0)
+                pdf.set_text_color(200,0,0)
                 pdf.cell(0, 6, alerta_clean, 0, 1)
+                pdf.set_text_color(0,0,0)
     else: 
         if silex: pdf.cell(0, 8, f"A. SILEX: {silex.nombre} ({silex.medida_botella})", 0, 1)
         if carbon: pdf.cell(0, 8, f"B. CARBON: {carbon.nombre} ({carbon.medida_botella})", 0, 1)
         
         if v_buffer_intermedio > 0:
-            pdf.cell(0, 8, f"C. BUFFER: {int(v_buffer_intermedio)} Litros (Recomendado)", 0, 1)
+            pdf.cell(0, 8, f"C. BUFFER: {int(v_buffer_intermedio)} Litros", 0, 1)
 
         if descal:
             pdf.cell(0, 8, f"D. DESCAL: {descal[0].nombre} ({descal[0].medida_botella})", 0, 1)
@@ -241,7 +307,7 @@ def generar_pdf_tecnico(modo, ro, descal, carbon, silex, flow, blending_pct, con
         if ro:
             pdf.cell(0, 8, f"E. OSMOSIS: {ro.nombre} ({ro.produccion_nominal} L/dia)", 0, 1)
 
-    # DEPÓSITO FINAL
+    # DEPÓSITO
     pdf.ln(5)
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, "4. ACUMULACIÓN FINAL", 1, 1, 'L', 1)
@@ -295,11 +361,9 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
             kg_sal = (365 / descal_sel[1]) * descal_sel[0].sal_kg
             caudal_acometida_necesario = descal_sel[0].caudal_contralavado_m3h * 1000
             
-        # OPEX SIN MANTENIMIENTO
         opex = {"kg_sal": kg_sal, "coste_sal": kg_sal * coste_sal, "total": kg_sal * coste_sal}
 
     else:
-        # MODO RO
         tcf = 1.0 if temp >= 25 else max(1.0 - ((25 - temp) * 0.03), 0.1)
         ppm_ro = ppm_in * 0.05
         if ppm_out < ppm_ro: ppm_out = ppm_ro
@@ -321,7 +385,6 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
         if ro_sel:
             agua_entrada_ro = litros_ro_dia / ro_sel.eficiencia
             agua_total = agua_entrada_ro + litros_bypass_dia
-            
             caudal_bomba_ro_lh = (ro_sel.produccion_nominal / 24 / ro_sel.eficiencia) * 1.5 
             
             if usar_buffer:
@@ -385,13 +448,12 @@ def calcular_logica(modo, consumo, ppm_in, ppm_out, dureza, temp, horas, coste_a
             horas_ro_reales = litros_ro_dia / ((ro_sel.produccion_nominal * tcf)/24)
             opex_luz = horas_ro_reales * ro_sel.potencia_kw * 365 * coste_luz
             
-            # OPEX SIN MANTENIMIENTO
             opex = {"kg_sal": kg_sal, "coste_agua": opex_agua, "coste_sal": opex_sal, "coste_luz": opex_luz, "total": opex_agua + opex_sal + opex_luz}
 
     return ro_sel, descal_sel, carbon_sel, silex_sel, flow, opex, alerta_autonomia, v_buffer_intermedio, v_deposito_final, is_manual_final, is_manual_buffer, caudal_acometida_necesario
 
 # ==============================================================================
-# 3. INTERFAZ VISUAL
+# 3. INTERFAZ VISUAL V32
 # ==============================================================================
 
 c_head1, c_head2 = st.columns([1, 5])
@@ -400,11 +462,17 @@ with c_head1:
     except: st.warning("Logo?")
 with c_head2:
     st.markdown("## 💧 AimyWater Engineering Suite")
-    st.caption("Plataforma Integral de Dimensionamiento v31")
+    st.caption("Plataforma Integral de Dimensionamiento V32")
 
 st.markdown("---")
 
 with st.sidebar:
+    st.markdown(f"👤 **Usuario:** {st.secrets.get('users', {}).keys()}")
+    if st.button("Cerrar Sesión"):
+        st.session_state["password_correct"] = False
+        st.rerun()
+    st.markdown("---")
+    
     modo = st.radio("🎛️ MODO DE DISEÑO", ["Planta Completa (RO)", "Solo Descalcificación"])
     st.markdown("---")
     
@@ -459,24 +527,24 @@ if btn_calc:
             tag = "PERSONALIZADO" if is_man_buf else "AUTO"
             st.markdown(f"""
             <div class='tank-container tank-intermedio'>
-                <div class='tank-label'>🛡️ DEPÓSITO INTERMEDIO</div>
-                <div class='tank-val'>{int(v_buffer)} L</div>
-                <div class='tank-label'>{tag}</div>
+                <div class='tank-header'>🛡️ DEPÓSITO INTERMEDIO</div>
+                <div class='tank-number'>{int(v_buffer)} L</div>
+                <div class='tank-desc'>{tag}</div>
             </div>""", unsafe_allow_html=True)
     
     with col_tanks[1] if v_buffer > 0 else col_tanks[0]:
         tag_fin = "PERSONALIZADO" if is_man_final else "AUTO"
         st.markdown(f"""
         <div class='tank-container tank-final'>
-            <div class='tank-label'>🛢️ DEPÓSITO FINAL</div>
-            <div class='tank-val'>{int(v_producto)} L</div>
-            <div class='tank-label'>{tag_fin}</div>
+            <div class='tank-header'>🛢️ DEPÓSITO FINAL</div>
+            <div class='tank-number'>{int(v_producto)} L</div>
+            <div class='tank-desc'>{tag_fin}</div>
         </div>""", unsafe_allow_html=True)
     
     # AVISO DE INSTALACIÓN
     st.markdown(f"""
     <div class='warning-box'>
-        ⚠️ <b>REQUISITO DE INSTALACIÓN:</b> La acometida de agua bruta debe garantizar un caudal mínimo de <b>{int(caudal_acom)} L/h</b> a 2.5 bar para realizar los contralavados de los filtros correctamente.
+        <span class='warning-text'>⚠️ REQUISITO DE INSTALACIÓN:</span> La acometida de agua bruta debe garantizar un caudal mínimo de <b>{int(caudal_acom)} L/h</b> a 2.5 bar para realizar los contralavados de los filtros correctamente.
     </div>
     """, unsafe_allow_html=True)
     
