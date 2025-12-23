@@ -5,10 +5,10 @@ import plotly.express as px
 import pandas as pd
 
 # ==============================================================================
-# 0. CONFIGURACIÓN VISUAL
+# 0. CONFIGURACIÓN VISUAL (TECH MODE)
 # ==============================================================================
 st.set_page_config(
-    page_title="AimyWater V47",
+    page_title="AimyWater V48",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -165,24 +165,19 @@ def calcular_tuberia(caudal_lh):
     elif caudal_lh < 9000: return '1 1/2"'
     else: return '2"'
 
-# --- FUNCIÓN DE CÁLCULO CORREGIDA (FIX TYPE ERROR) ---
+# --- FUNCIÓN DE CÁLCULO CORREGIDA (ARGUMENTO 'CAUDAL_PUNTA' AÑADIDO) ---
 def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, buffer_on, descal_on, man_fin, man_buf):
     res = {}
     msgs = []
     
-    # Factor seguridad filtros
     fs = 1.2 if origen == "Pozo" else 1.0
     
-    # 1. DEPÓSITO FINAL
-    # Se calcula para cubrir el caudal punta si la producción es más lenta.
-    # Mínimo: 75% del consumo diario para seguridad.
-    res['v_final'] = man_fin if man_fin > 0 else consumo * 0.75
+    # Depósito Final (Usamos caudal punta para cálculo si no es manual, o 75% consumo)
+    # Si hay caudal punta alto, el depósito debe ser capaz de amortiguarlo.
+    res['v_final'] = man_fin if man_fin > 0 else max(consumo * 0.75, caudal_punta * 60) # Min 1 hora de punta
     
-    # 2. CÁLCULO
     if modo == "Solo Descalcificación":
-        # Caudal de producción (llenado)
         q_target = (consumo / horas) * fs
-        
         cands = [d for d in descal_db if (d.caudal_max * 1000) >= q_target]
         if cands:
             carga = (consumo/1000)*dureza
@@ -193,30 +188,21 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['opex'] = res['sal_anual'] * costes['sal']
             res['wash'] = res['descal'].caudal_wash * 1000
             res['q_filtros'] = q_target
-        else:
-            res['descal'] = None
+        else: res['descal'] = None
             
     else: # MODO RO
         tcf = 1.0 if temp >= 25 else max(1.0 - ((25 - temp) * 0.03), 0.1)
         factor_recuperacion = 0.8 if ppm > 2500 else 1.0
         if ppm > 2500: msgs.append("Nota: Eficiencia reducida por alta salinidad.")
         
-        # Caudal Objetivo: Consumo total a producir en las horas definidas
-        q_prod_objetivo = consumo
+        # Caudal de producción objetivo (Llenado lento en 'horas')
+        q_prod_target = consumo
         
-        # Filtramos máquinas que sean capaces de producir el total en las horas disponibles
-        ro_cands = []
-        for r in ro_db:
-            if ppm <= r.max_ppm:
-                # Producción Real Diaria de esta máquina en 'horas' de trabajo
-                prod_real_diaria = (r.produccion_nominal * tcf / 24) * horas
-                if prod_real_diaria >= q_prod_objetivo:
-                    ro_cands.append(r)
+        # Selección RO
+        ro_cands = [r for r in ro_db if ppm <= r.max_ppm and ((r.produccion_nominal * tcf / 24) * horas) >= q_prod_target]
         
         if ro_cands:
-            # Selección inteligente
-            res['ro'] = next((r for r in ro_cands if "ALFA" in r.nombre or "AP" in r.nombre), ro_cands[-1]) if q_prod_objetivo > 600 else ro_cands[0]
-            
+            res['ro'] = next((r for r in ro_cands if "ALFA" in r.nombre or "AP" in r.nombre), ro_cands[-1]) if consumo > 600 else ro_cands[0]
             res['efi_real'] = res['ro'].eficiencia * factor_recuperacion
             
             # Caudal Producción Real por Hora
@@ -225,19 +211,19 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             # Agua Bruta Necesaria (Diaria)
             agua_in_diaria = consumo / res['efi_real']
             
-            # Caudal instantáneo bomba RO (para dimensionar filtros)
+            # Caudal instantáneo bomba RO
             q_bomba = (res['ro'].produccion_nominal / 24 / res['ro'].eficiencia) * 1.5
             
             if buffer_on:
-                q_filtros = (agua_in_diaria / horas) * fs # Llenado lento buffer
+                q_filtros = (agua_in_diaria / horas) * fs 
                 res['v_buffer'] = man_buf if man_buf > 0 else q_bomba * 2
             else:
-                q_filtros = q_bomba * fs # Directo a bomba
+                q_filtros = q_bomba * fs
                 res['v_buffer'] = 0
             
             res['q_filtros'] = q_filtros
             
-            # SELECCIONES
+            # SELECCIÓN EQUIPOS
             sx_cands = [s for s in silex_db if (s.caudal_max * 1000) >= q_filtros]
             res['silex'] = sx_cands[0] if sx_cands else None
             
@@ -262,9 +248,13 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['opex'] = (kwh*costes['luz']) + (sal*costes['sal']) + (m3*costes['agua'])
             res['breakdown'] = {'Agua': m3*costes['agua'], 'Sal': sal*costes['sal'], 'Luz': kwh*costes['luz']}
             
+            w1 = res['silex'].caudal_wash if res.get('silex') else 0
+            w2 = res['carbon'].caudal_wash if res.get('carbon') else 0
+            w3 = res['descal'].caudal_wash if res.get('descal') else 0
+            res['wash'] = max(w1, w2, w3) * 1000
+            
         else: res['ro'] = None
 
-    # Tubería
     max_flow = max(res.get('q_filtros', 0), res.get('wash', 0))
     res['tuberia'] = calcular_tuberia(max_flow)
     res['msgs'] = msgs
@@ -289,26 +279,24 @@ def create_pdf(res, inputs, modo):
     pdf.cell(0, 10, clean("INFORME TÉCNICO - AIMYWATER"), 0, 1, 'C')
     pdf.ln(10)
     
-    # PARAMETROS
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, clean("1. PARÁMETROS DE DISEÑO"), 0, 1)
+    pdf.cell(0, 10, clean("1. PARAMETROS DE DISEÑO"), 0, 1)
     pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 8, clean(f"Consumo Diario: {inputs['consumo']} L/dia"), 0, 1)
-    pdf.cell(0, 8, clean(f"Horas Produccion: {inputs['horas']} h/dia"), 0, 1)
+    pdf.cell(0, 8, clean(f"Consumo Objetivo: {inputs['consumo']} L/dia"), 0, 1)
+    pdf.cell(0, 8, clean(f"Caudal Punta (Demanda): {inputs['punta']} L/min"), 0, 1)
     if modo == "Planta Completa (RO)":
         pdf.cell(0, 8, clean(f"Salinidad: {inputs['ppm']} ppm | Dureza: {inputs['dureza']} Hf"), 0, 1)
     pdf.ln(5)
     
-    # REQUISITOS INSTALACION
     pdf.set_font("Arial", 'B', 12)
-    pdf.set_text_color(200,0,0)
-    pdf.cell(0, 10, clean("2. REQUISITOS DE INSTALACIÓN"), 0, 1)
-    pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 8, clean(f"ACOMETIDA MINIMA: {int(res.get('wash', 0))} L/h a 2.5 bar (Lavado Filtros)"), 0, 1)
-    pdf.set_text_color(0,0,0)
+    pdf.set_text_color(200, 0, 0)
+    pdf.cell(0, 8, "2. REQUISITOS INSTALACIÓN", 0, 1)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", size=10)
+    pdf.multi_cell(0, 6, f"ACOMETIDA REQUERIDA: {int(res.get('wash', 0))} L/h a 2.5 bar (Lavado Filtros)")
+    pdf.cell(0, 8, clean(f"TUBERIA COLECTOR: {res['tuberia']}"), 0, 1)
     pdf.ln(5)
-
-    # EQUIPOS
+    
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, clean("3. EQUIPOS SELECCIONADOS"), 0, 1)
     pdf.set_font("Arial", '', 10)
@@ -321,9 +309,8 @@ def create_pdf(res, inputs, modo):
         if res.get('carbon'): pdf.cell(0, 8, clean(f"B. CARBON: {res['carbon'].nombre} ({res['carbon'].medida_botella})"), 0, 1)
         if res.get('v_buffer', 0) > 0: pdf.cell(0, 8, clean(f"C. BUFFER: {int(res['v_buffer'])} Litros"), 0, 1)
         if res.get('descal'): pdf.cell(0, 8, clean(f"D. DESCAL: {res['descal'].nombre} ({res['descal'].medida_botella})"), 0, 1)
-        if res.get('ro'): pdf.cell(0, 8, clean(f"E. OSMOSIS: {res['ro'].nombre} ({res['ro'].produccion_nominal} L/d)"), 0, 1)
+        if res.get('ro'): pdf.cell(0, 8, clean(f"E. OSMOSIS: {res['ro'].nombre} ({res['ro'].produccion_nominal} L/dia)"), 0, 1)
     
-    # DEPOSITO
     pdf.ln(5)
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, clean("4. ACUMULACIÓN"), 0, 1)
@@ -342,7 +329,7 @@ with c1:
     except: st.warning("Logo?")
 with c2:
     st.title("AimyWater Master")
-    st.caption("v47.0 Stable")
+    st.caption("v48.0 Bugfix Edition")
 
 st.divider()
 
@@ -354,11 +341,9 @@ with col_sb:
     modo = st.selectbox("Modo", ["Planta Completa (RO)", "Solo Descalcificación"])
     
     consumo = st.number_input("Consumo Diario (L)", value=2000, step=100)
-    # NUEVO: Input Caudal Punta (solo informativo para PDF/Cálculo Depósito si quisiéramos)
+    # CAUDAL PUNTA (Input necesario para la función corregida)
     caudal_punta = st.number_input("Caudal Punta (L/min)", value=40)
-    
-    # CORRECCIÓN HORAS: Límite 22h para asegurar paradas técnicas
-    horas = st.number_input("Horas Prod (Max 22)", value=20, max_value=22, min_value=1)
+    horas = st.number_input("Horas Prod (Max 22)", value=20, max_value=22)
     
     buffer, descal = False, True
     if modo == "Planta Completa (RO)":
@@ -382,8 +367,8 @@ with col_sb:
         st.session_state['run'] = True
 
 if st.session_state.get('run'):
-    # LLAMADA CORREGIDA A LA FUNCIÓN (Se añaden todos los argumentos)
-    res = calcular(origen, modo, consumo, ppm, dureza, temp, horas, costes, buffer, descal, mf, mb)
+    # LLAMADA CORREGIDA: INCLUYE caudal_punta
+    res = calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, buffer, descal, mf, mb)
     
     if res['msgs']:
         for msg in res['msgs']:
@@ -429,8 +414,7 @@ if st.session_state.get('run'):
 
         col_main.markdown("---")
         try:
-            # FIX: Pasar 'caudal_punta' al PDF aunque no se use en cálculo directo
-            inputs_pdf = {'consumo': consumo, 'horas': horas, 'origen': origen, 'ppm': ppm, 'dureza': dureza}
+            inputs_pdf = {'consumo': consumo, 'horas': horas, 'origen': origen, 'ppm': ppm, 'dureza': dureza, 'punta': caudal_punta}
             pdf_data = create_pdf(res, inputs_pdf, modo)
             b64 = base64.b64encode(pdf_data).decode()
             col_main.markdown(f'<a href="data:application/octet-stream;base64,{b64}" download="informe_aimywater.pdf"><button style="background:#00e5ff;color:black;width:100%;padding:15px;border:none;border-radius:10px;font-weight:bold;">📥 DESCARGAR INFORME PDF</button></a>', unsafe_allow_html=True)
