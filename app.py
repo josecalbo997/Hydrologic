@@ -8,10 +8,10 @@ import requests
 import tempfile
 
 # ==============================================================================
-# 0. CONFIGURACIÓN VISUAL
+# 0. CONFIGURACIÓN
 # ==============================================================================
 st.set_page_config(
-    page_title="HYDROLOGIC V58",
+    page_title="HYDROLOGIC V59",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -34,87 +34,73 @@ def local_css():
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
         
         /* FUENTE GLOBAL */
-        html, body, [class*="css"], [data-testid="stAppViewContainer"] {
-            font-family: 'Manrope', sans-serif !important;
+        html, body, [class*="css"] {
+            font-family: 'Manrope', sans-serif;
+        }
+        
+        /* HEADER PERSONALIZADO */
+        .header-style {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 0;
+        }
+        .sub-header-style {
+            font-size: 0.9rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
         }
 
-        /* --- 1. FONDO GENERAL (Gris Claro) --- */
-        [data-testid="stAppViewContainer"] {
-            background-color: #f1f5f9 !important;
-            color: #0f172a !important;
-        }
-        
-        /* --- 2. SIDEBAR (Blanca) --- */
-        [data-testid="stSidebar"] {
-            background-color: #ffffff !important;
-            border-right: 1px solid #cbd5e1;
-        }
-
-        /* --- 3. FIX NUCLEAR PARA INPUTS (SOLUCIÓN AL PROBLEMA) --- */
-        
-        /* CAJAS DE TEXTO Y NÚMEROS: FORZAR FONDO BLANCO Y TEXTO NEGRO */
-        div[data-baseweb="input"] {
-            background-color: #ffffff !important;
-            border: 1px solid #94a3b8 !important;
-            border-radius: 6px !important;
-        }
-        
-        input {
-            color: #000000 !important;          /* Texto NEGRO */
-            caret-color: #000000 !important;    /* Cursor NEGRO */
-            -webkit-text-fill-color: #000000 !important;
-            background-color: transparent !important;
-            font-weight: 600 !important;
-        }
-        
-        /* SELECTORES (DROPDOWNS) */
-        div[data-baseweb="select"] > div {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border-color: #94a3b8 !important;
-        }
-        
-        /* ETIQUETAS (LABELS) ENCIMA DE LOS INPUTS */
-        label, .stNumberInput label, .stSelectbox label, .stSlider label {
-            color: #0f172a !important; /* Azul muy oscuro (casi negro) */
-            font-weight: 800 !important;
-            font-size: 0.95rem !important;
-        }
-        
-        /* MENÚS DESPLEGABLES (OPCIONES) */
-        ul[data-baseweb="menu"] {
-            background-color: #ffffff !important;
-        }
-        li[data-baseweb="option"] {
-            color: #000000 !important;
-        }
-
-        /* --- 4. TARJETAS Y MÉTRICAS --- */
+        /* TARJETAS KPI */
         div[data-testid="stMetric"] {
-            background-color: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-            border-radius: 10px !important;
-            padding: 15px !important;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.04);
         }
-        div[data-testid="stMetricLabel"] { color: #64748b !important; }
-        div[data-testid="stMetricValue"] { color: #0284c7 !important; font-weight: 800 !important; }
+        div[data-testid="stMetricLabel"] { color: #64748b; font-size: 0.85rem; font-weight: 700; }
+        div[data-testid="stMetricValue"] { color: #0284c7; font-size: 1.6rem; font-weight: 800; }
 
-        /* --- 5. ELEMENTOS PERSONALIZADOS --- */
+        /* INPUTS (Refuerzo visual) */
+        .stNumberInput input, .stTextInput input {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        
+        /* BOTONES */
+        div.stButton > button:first-child {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            font-weight: 700;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2);
+            transition: all 0.3s ease;
+        }
+        div.stButton > button:first-child:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(2, 132, 199, 0.3);
+        }
+
+        /* TARJETAS PERSONALIZADAS */
         .tech-card {
             background-color: #ffffff;
             border: 1px solid #e2e8f0;
             border-left: 5px solid #0ea5e9;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 10px;
             margin-bottom: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         }
-        .tech-title { color: #0ea5e9; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; }
-        .tech-value { color: #0f172a; font-size: 1.3rem; font-weight: 800; }
-        .tech-sub { color: #64748b; font-size: 0.8rem; }
+        .tech-title { color: #0ea5e9; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .tech-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; }
+        .tech-sub { color: #64748b; font-size: 0.85rem; font-weight: 600; }
         
-        /* Depósitos */
+        /* DEPÓSITOS */
         .tank-container {
             background-color: #ffffff;
             border: 1px solid #cbd5e1;
@@ -122,20 +108,15 @@ def local_css():
             border-radius: 12px;
             text-align: center;
             margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
         }
         .tank-val { color: #0f172a; font-size: 2rem; font-weight: 900; }
+        .tank-label { color: #475569; font-weight: 700; text-transform: uppercase; font-size: 0.85rem; }
+        
         .tank-final { border-bottom: 5px solid #2563eb; }
         .tank-intermedio { border-bottom: 5px solid #16a34a; }
-        
-        /* Botones */
-        div.stButton > button:first-child {
-            background-color: #0284c7 !important;
-            color: #ffffff !important;
-            border: none !important;
-            font-weight: 700 !important;
-        }
-        div.stButton > button:first-child p { color: #ffffff !important; }
 
+        /* ALERTA */
         .alert-box {
             background-color: #fffbeb;
             border: 1px solid #fcd34d;
@@ -143,7 +124,11 @@ def local_css():
             padding: 15px;
             border-radius: 8px;
             font-weight: 600;
+            margin-top: 15px;
         }
+        
+        /* LOGIN */
+        .login-container { text-align: center; margin-top: 50px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -158,20 +143,22 @@ def check_auth():
     
     c1,c2,c3 = st.columns([1,2,1])
     with c2:
-        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        try: st.image("logo.png", width=150)
+        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
+        try: st.image("logo.png", width=180)
         except: pass
-        st.markdown("### 🔐 HYDROLOGIC ACCESS")
+        st.markdown("<p class='header-style'>HYDROLOGIC</p>", unsafe_allow_html=True)
+        st.markdown("<p class='sub-header-style'>ENGINEERING SUITE</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
-        user = st.text_input("Usuario")
-        pwd = st.text_input("Contraseña", type="password")
+        user = st.text_input("ID Licencia")
+        pwd = st.text_input("Clave de Acceso", type="password")
         
-        if st.button("ENTRAR", type="primary", use_container_width=True):
+        if st.button("ACCEDER AL SISTEMA", type="primary", use_container_width=True):
             if not supabase:
-                st.error("Error Configuración Secrets.")
+                st.error("Error: Configura los secretos de Supabase.")
                 return
             try:
+                # Comprobación segura
                 response = supabase.table("usuarios").select("*").eq("username", user).eq("password", pwd).execute()
                 if len(response.data) > 0:
                     usuario_data = response.data[0]
@@ -181,11 +168,12 @@ def check_auth():
                         st.rerun()
                     else: st.error("Licencia expirada.")
                 else:
+                    # Fallback Admin
                     if user == "admin" and pwd == "aimywater2025":
                          st.session_state["auth"] = True
                          st.session_state["user_info"] = {"username": "admin", "empresa": "HYDROLOGIC HQ", "rol": "admin", "logo_url": ""}
                          st.rerun()
-                    else: st.error("Incorrecto.")
+                    else: st.error("Credenciales incorrectas.")
             except Exception as e: st.error(f"Error: {e}")
     return False
 
@@ -242,7 +230,6 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
         factor_recuperacion = 0.8 if ppm > 2500 else 1.0
         q_target = consumo
         ro_cands = [r for r in ro_db if ppm <= r.max_ppm and ((r.produccion_nominal * tcf / 24) * horas) >= q_target]
-        
         if ro_cands:
             res['ro'] = next((r for r in ro_cands if "ALFA" in r.nombre or "AP" in r.nombre), ro_cands[-1]) if q_target > 600 else ro_cands[0]
             res['efi_real'] = res['ro'].eficiencia * factor_recuperacion
@@ -262,7 +249,7 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['silex'] = sx_cands[0] if sx_cands else None
             cb_cands = [c for c in carbon_db if (c.caudal_max * 1000) >= q_filtros]
             res['carbon'] = cb_cands[0] if cb_cands else None
-            
+
             if descal_on and dureza > 5:
                 ds = [d for d in descal_db if (d.caudal_max*1000) >= q_filtros]
                 if ds:
@@ -287,11 +274,11 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
     res['msgs'] = msgs
     return res
 
-# ... (PDF Generator igual que V48) ...
 def create_pdf(res, inputs, modo, user_data):
     pdf = FPDF()
     pdf.add_page()
-    # Logo descarga
+    
+    # 1. LOGO
     logo_impreso = False
     if user_data.get("logo_url") and len(str(user_data["logo_url"])) > 5:
         try:
@@ -305,14 +292,16 @@ def create_pdf(res, inputs, modo, user_data):
     if not logo_impreso:
         try: pdf.image('logo.png', 10, 8, 33)
         except: pass
-    
+
     pdf.ln(20)
     def clean(text): return str(text).encode('latin-1', 'replace').decode('latin-1') if text else "N/A"
-    emp = user_data.get("empresa", "HYDROLOGIC").upper()
-    pdf.set_font("Arial", 'B', 16); pdf.cell(0, 10, clean(f"INFORME TÉCNICO - {emp}"), 0, 1, 'C'); pdf.ln(10)
+    empresa_nombre = user_data.get("empresa", "HYDROLOGIC").upper()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, clean(f"INFORME TÉCNICO - {empresa_nombre}"), 0, 1, 'C')
+    pdf.ln(10)
     
     pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, clean("1. PARAMETROS"), 0, 1)
-    pdf.set_font("Arial", '', 10); pdf.cell(0, 8, clean(f"Consumo: {inputs['consumo']} L/dia"), 0, 1)
+    pdf.set_font("Arial", '', 10); pdf.cell(0, 8, clean(f"Consumo: {inputs['consumo']} L/dia | Punta: {inputs['punta']} L/min"), 0, 1)
     if modo == "Planta Completa (RO)": pdf.cell(0, 8, clean(f"TDS Entrada: {inputs['ppm']} ppm | Dureza: {inputs['dureza']} Hf"), 0, 1)
     pdf.ln(5)
     
@@ -340,16 +329,16 @@ def create_pdf(res, inputs, modo, user_data):
 # ==============================================================================
 c_head1, c_head2 = st.columns([1, 5])
 with c_head1:
-    logo = st.session_state["user_info"].get("logo_url")
-    if logo: st.image(logo, width=120)
-    else: 
-        try: st.image("logo.png", width=120)
-        except: st.warning("Logo?")
+    try:
+        logo_url = st.session_state["user_info"].get("logo_url")
+        if logo_url: st.image(logo_url, width=120)
+        else: st.image("logo.png", width=120)
+    except: st.warning("Logo?")
 
 with c_head2:
     emp = st.session_state["user_info"].get("empresa", "HYDROLOGIC")
-    st.markdown('<p style="font-size:2.5em; font-weight:800; color:#0f172a; margin:0">HYDROLOGIC</p>', unsafe_allow_html=True)
-    st.markdown(f'<p style="color:#64748b; font-size:0.9em; margin-top:-10px">LICENCIA: {emp}</p>', unsafe_allow_html=True)
+    st.markdown('<p class="header-style">HYDROLOGIC</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-header-style">LICENCIA: {emp}</p>', unsafe_allow_html=True)
 
 st.divider()
 
@@ -395,7 +384,7 @@ with col_sb:
 if st.session_state.get('run'):
     res = calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, buffer, descal, mf, mb)
     if res.get('ro') or res.get('descal'):
-        for msg in res['msgs']: col_main.markdown(f"<div class='alert-box alert-yellow'>{msg}</div>", unsafe_allow_html=True)
+        for msg in res['msgs']: col_main.markdown(f"<div class='alert-box'>{msg}</div>", unsafe_allow_html=True)
         
         # 1. DEPOSITOS
         c1, c2 = col_main.columns(2)
@@ -409,28 +398,28 @@ if st.session_state.get('run'):
         eq1, eq2, eq3, eq4 = col_main.columns(4)
         if modo == "Planta Completa (RO)":
             with eq1:
-                if res.get('silex'): st.markdown(f"<div class='tech-card'><div class='tech-title'>🪨 SILEX</div><div class='tech-sub'>{res['silex'].medida_botella}</div></div>", unsafe_allow_html=True)
+                if res.get('silex'): st.markdown(f"<div class='tech-card'><div class='tech-title'>🪨 SILEX</div><div class='tech-value'>{res['silex'].medida_botella}</div><div class='tech-sub'>{res['silex'].nombre}</div></div>", unsafe_allow_html=True)
             with eq2:
-                if res.get('carbon'): st.markdown(f"<div class='tech-card'><div class='tech-title'>⚫ CARBON</div><div class='tech-sub'>{res['carbon'].medida_botella}</div></div>", unsafe_allow_html=True)
+                if res.get('carbon'): st.markdown(f"<div class='tech-card'><div class='tech-title'>⚫ CARBON</div><div class='tech-value'>{res['carbon'].medida_botella}</div><div class='tech-sub'>{res['carbon'].nombre}</div></div>", unsafe_allow_html=True)
             with eq3:
-                if res.get('descal'): st.markdown(f"<div class='tech-card'><div class='tech-title'>🧂 DESCAL</div><div class='tech-sub'>{res['descal'].medida_botella}</div></div>", unsafe_allow_html=True)
+                if res.get('descal'): st.markdown(f"<div class='tech-card'><div class='tech-title'>🧂 DESCAL</div><div class='tech-value'>{res['descal'].medida_botella}</div><div class='tech-sub'>{res['descal'].nombre}</div></div>", unsafe_allow_html=True)
             with eq4:
-                st.markdown(f"<div class='tech-card' style='border-left: 4px solid #00c6ff'><div class='tech-title'>💧 OSMOSIS</div><div class='tech-sub'>{res['ro'].nombre}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='tech-card' style='border-left: 4px solid #00c6ff'><div class='tech-title'>💧 OSMOSIS</div><div class='tech-value'>RO</div><div class='tech-sub'>{res['ro'].nombre}</div></div>", unsafe_allow_html=True)
         else:
-            eq1.markdown(f"<div class='tech-card'><div class='tech-title'>🧂 DESCAL</div><div class='tech-value'>{res['descal'].nombre}</div><div class='tech-sub'>{res['descal'].medida_botella}</div></div>", unsafe_allow_html=True)
+            eq1.markdown(f"<div class='tech-card'><div class='tech-title'>🧂 DESCAL</div><div class='tech-value'>{res['descal'].medida_botella}</div><div class='tech-sub'>{res['descal'].nombre}</div></div>", unsafe_allow_html=True)
 
-        # 3. DATOS
+        # 3. DATOS Y GRAFICOS
         col_main.subheader("📊 Análisis")
         d1, d2 = col_main.columns(2)
         with d1:
             st.info(f"**Prod. Horaria:** {int(res.get('q_prod_hora', consumo/horas))} L/h")
-            st.warning(f"**Acometida Min:** {int(res.get('wash', 0))} L/h")
+            st.markdown(f"<div class='alert-box'>⚠️ <b>Acometida Min:</b> {int(res.get('wash', 0))} L/h (Lavado)</div>", unsafe_allow_html=True)
             st.write(f"Tubería: **{res['tuberia']}**")
         with d2:
             if modo == "Planta Completa (RO)":
                 df = pd.DataFrame(list(res['breakdown'].items()), columns=['Item', 'Coste'])
                 fig = px.pie(df, values='Coste', names='Item', hole=0.6, color_discrete_sequence=px.colors.qualitative.Set3)
-                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="black", showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=150)
+                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="#0f172a", showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=150)
                 st.plotly_chart(fig, use_container_width=True)
             st.metric("OPEX Diario", f"{(res['opex']/365):.2f} €")
 
@@ -443,4 +432,5 @@ if st.session_state.get('run'):
         except Exception as e: col_main.error(f"Error PDF: {e}")
 
     else: col_main.error("Sin solución estándar.")
-else: col_main.info("👈 Introduce parámetros.")
+else:
+    col_main.info("👈 Introduce parámetros.")
