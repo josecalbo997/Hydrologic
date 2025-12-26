@@ -1,5 +1,6 @@
 streamlit
 fpdf
 plotly
-panda
+pandas
 supabase
+requests
