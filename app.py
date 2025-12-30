@@ -7,19 +7,20 @@ from supabase import create_client, Client
 import requests
 import tempfile
 import math
+import time  # <--- ¡AQUÍ ESTABA EL ERROR! AÑADIDO.
 from PIL import Image
 
 # ==============================================================================
 # 0. CONFIGURACIÓN VISUAL
 # ==============================================================================
 st.set_page_config(
-    page_title="HYDROLOGIC V66",
+    page_title="HYDROLOGIC V67",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CONEXIÓN SUPABASE (Protegida contra fallos)
+# CONEXIÓN SUPABASE
 @st.cache_resource
 def init_connection():
     try:
@@ -127,31 +128,26 @@ def local_css():
         /* LOGIN ESPECÍFICO */
         .login-title { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 2rem; color: #0f172a; margin: 0; text-align: center; }
         .login-sub { color: #64748b; font-size: 0.9rem; text-align: center; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .admin-panel { background-color: #1e1b4b; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
     </style>
     """, unsafe_allow_html=True)
 local_css()
 
 # ==============================================================================
-# 1. LOGIN (REDITADO: LOGO GRANDE Y CENTRADO)
+# 1. LOGIN MEJORADO
 # ==============================================================================
 def check_auth():
     if "auth" not in st.session_state: st.session_state["auth"] = False
     if st.session_state["auth"]: return True
     
-    # Columnas para centrar la tarjeta de login en la pantalla
     c1,c2,c3 = st.columns([1, 1.5, 1]) 
-    
     with c2:
-        st.markdown("<br><br>", unsafe_allow_html=True) # Espacio superior
-        
-        # --- LOGO GRANDE Y CENTRADO ---
-        # Usamos columnas internas para controlar el tamaño exacto del logo
-        l1, l2, l3 = st.columns([1, 4, 1])
-        with l2:
-            try: 
-                st.image("logo.png", use_container_width=True)
-            except: 
-                st.warning("Sube 'logo.png' a GitHub")
+        st.markdown("<br><br><br>", unsafe_allow_html=True) 
+        ic1, ic2, ic3 = st.columns([1, 3, 1]) 
+        with ic2:
+            try: st.image("logo.png", use_container_width=True)
+            except: st.warning("Sube 'logo.png'")
         
         st.markdown('<p class="login-title">HYDROLOGIC</p>', unsafe_allow_html=True)
         st.markdown('<p class="login-sub">ENGINEERING ACCESS</p>', unsafe_allow_html=True)
@@ -161,7 +157,7 @@ def check_auth():
             pwd = st.text_input("Contraseña", type="password")
             
             if st.button("INICIAR SESIÓN", type="primary", use_container_width=True):
-                # 1. Intento por Base de Datos (Si está configurada)
+                # 1. Intento Supabase
                 if supabase:
                     try:
                         response = supabase.table("usuarios").select("*").eq("username", user).eq("password", pwd).execute()
@@ -171,26 +167,26 @@ def check_auth():
                                 st.session_state["auth"] = True
                                 st.session_state["user_info"] = u
                                 st.rerun()
-                            else: st.error("⚠️ Licencia expirada. Contacte con soporte.")
+                            else: st.error("⚠️ Licencia expirada.")
                             return
-                    except: pass # Si falla DB, probamos credencial maestra
+                    except: pass 
 
-                # 2. Credencial Maestra (Siempre funciona)
+                # 2. Credencial Maestra
                 if user == "admin" and pwd == "hydro2025":
                     st.session_state["auth"] = True
                     st.session_state["user_info"] = {"username": "admin", "empresa": "HYDROLOGIC HQ", "rol": "admin", "logo_url": ""}
                     st.rerun()
                 else:
-                    st.error("❌ Usuario o contraseña incorrectos")
+                    st.error("❌ Datos incorrectos")
             
-            st.markdown("<div style='text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 20px;'>v66.0 | Secure Login</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 20px;'>v67.0 | Secure Login</div>", unsafe_allow_html=True)
 
     return False
 
 if not check_auth(): st.stop()
 
 # ==============================================================================
-# 2. LÓGICA (CON MEMBRANAS)
+# 2. LÓGICA
 # ==============================================================================
 class EquipoRO:
     def __init__(self, n, prod, ppm, ef, kw, mem):
@@ -199,21 +195,13 @@ class Filtro:
     def __init__(self, tipo, n, bot, caud, wash, sal=0, cap=0):
         self.tipo = tipo; self.nombre = n; self.medida_botella = bot; self.caudal_max = caud; self.caudal_wash = wash; self.sal_kg = sal; self.capacidad = cap
 
-# CATÁLOGOS CON MEMBRANAS
 ro_db = [
-    # Doméstico
-    EquipoRO("PURHOME PLUS", 300, 3000, 0.5, 0.03, "Membrana HRM"),
-    EquipoRO("DF 800 UV-LED", 3000, 1500, 0.71, 0.08, "2x400 GPD"),
-    EquipoRO("Direct Flow 1200", 4500, 1500, 0.66, 0.10, "3x400 GPD"),
-    # Industrial
-    EquipoRO("ALFA 140", 5000, 2000, 0.5, 0.75, "1x4040"),
-    EquipoRO("ALFA 240", 10000, 2000, 0.5, 1.1, "2x4040"),
-    EquipoRO("ALFA 340", 15000, 2000, 0.6, 1.5, "3x4040"),
-    EquipoRO("ALFA 440", 20000, 2000, 0.6, 1.5, "4x4040"),
-    EquipoRO("ALFA 640", 30000, 2000, 0.6, 2.2, "6x4040"),
+    EquipoRO("PURHOME PLUS", 300, 3000, 0.5, 0.03, "Membrana HRM"), EquipoRO("DF 800 UV-LED", 3000, 1500, 0.71, 0.08, "2x400 GPD"),
+    EquipoRO("Direct Flow 1200", 4500, 1500, 0.66, 0.10, "3x400 GPD"), EquipoRO("ALFA 140", 5000, 2000, 0.5, 0.75, "1x4040"),
+    EquipoRO("ALFA 240", 10000, 2000, 0.5, 1.1, "2x4040"), EquipoRO("ALFA 340", 15000, 2000, 0.6, 1.5, "3x4040"),
+    EquipoRO("ALFA 440", 20000, 2000, 0.6, 1.5, "4x4040"), EquipoRO("ALFA 640", 30000, 2000, 0.6, 2.2, "6x4040"),
     EquipoRO("ALFA 840 (Custom)", 40000, 2000, 0.7, 3.0, "8x4040"),
-    EquipoRO("AP-6000 LUXE", 18000, 6000, 0.6, 2.2, "4x4040 High TDS"),
-    EquipoRO("AP-10000 LUXE", 30000, 6000, 0.6, 4.0, "6x4040 High TDS"),
+    EquipoRO("AP-6000 LUXE", 18000, 6000, 0.6, 2.2, "4x4040 High TDS"), EquipoRO("AP-10000 LUXE", 30000, 6000, 0.6, 4.0, "6x4040 High TDS"),
 ]
 
 silex_db = [
@@ -249,16 +237,13 @@ def calcular_tuberia(caudal_lh):
     elif caudal_lh < 20000: return '2"'
     else: return '2 1/2"'
 
-def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, descal_on, man_fin, man_raw):
+def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, buffer_on, descal_on, man_fin, man_buf):
     res = {}
     msgs = []
     
-    # 1. DEPÓSITOS
     res['v_final'] = man_fin if man_fin > 0 else max(consumo * 0.75, caudal_punta * 60)
-    
     fs = 1.2 if origen == "Pozo" else 1.0
     
-    # 2. CÁLCULO
     if modo == "Solo Descalcificación":
         q_target = consumo / horas
         cands = [d for d in descal_db if (d.caudal_max * 1000) >= q_target]
@@ -275,9 +260,8 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
         
         q_bomba = max(res.get('q_filtros', 0), res.get('wash', 0))
         res['bomba_nom'], res['bomba_kw'] = calcular_bomba(q_bomba)
-        res['v_raw'] = man_raw if man_raw > 0 else res.get('wash', 0) * 0.4
-
-    else: # MODO RO
+        res['v_raw'] = man_buf if man_buf > 0 else res.get('wash', 0) * 0.4
+    else: 
         tcf = 1.0 if temp >= 25 else max(1.0 - ((25 - temp) * 0.03), 0.1)
         factor_recuperacion = 0.8 if ppm > 2500 else 1.0
         q_target = consumo
@@ -291,17 +275,23 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             agua_in = consumo / res['efi_real']
             q_bomba = (res['ro'].produccion_nominal / 24 / res['ro'].eficiencia) * 1.5
             
-            # Filtros se dimensionan para la bomba de RO (Directo desde bomba aporte)
-            res['q_filtros'] = q_bomba
+            if buffer_on:
+                q_filtros = (agua_in / 20) * fs 
+                res['v_buffer'] = man_buf if man_buf > 0 else q_bomba * 2
+            else:
+                q_filtros = q_bomba * fs 
+                res['v_buffer'] = 0
             
-            sx = [s for s in silex_db if (s.caudal_max * 1000) >= res['q_filtros']]
-            res['silex'] = sx[0] if sx else None
+            res['q_filtros'] = q_filtros
             
-            cb = [c for c in carbon_db if (c.caudal_max * 1000) >= res['q_filtros']]
-            res['carbon'] = cb[0] if cb else None
+            sx_cands = [s for s in silex_db if (s.caudal_max * 1000) >= q_filtros]
+            res['silex'] = sx_cands[0] if sx_cands else None
+            
+            cb_cands = [c for c in carbon_db if (c.caudal_max * 1000) >= q_filtros]
+            res['carbon'] = cb_cands[0] if cb_cands else None
 
             if descal_on and dureza > 5:
-                ds = [d for d in descal_db if (d.caudal_max*1000) >= res['q_filtros']]
+                ds = [d for d in descal_db if (d.caudal_max*1000) >= q_filtros]
                 if ds:
                     carga = (agua_in/1000)*dureza
                     v = [d for d in ds if (d.capacidad/carga if carga>0 else 99) >= 5]
@@ -317,7 +307,6 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['opex'] = (kwh*costes['luz']) + (sal*costes['sal']) + (m3*costes['agua'])
             res['breakdown'] = {'Agua': m3*costes['agua'], 'Sal': sal*costes['sal'], 'Luz': kwh*costes['luz']}
             
-            # Caudal lavado (Max de todos)
             w1 = res['silex'].caudal_wash if res.get('silex') else 0
             w2 = res['carbon'].caudal_wash if res.get('carbon') else 0
             w3 = res['descal'].caudal_wash if res.get('descal') else 0
@@ -325,10 +314,7 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             
             q_bomba_aporte = max(res['q_filtros'], res['wash'])
             res['bomba_nom'], res['bomba_kw'] = calcular_bomba(q_bomba_aporte)
-            
-            res['v_raw'] = man_raw if man_raw > 0 else (res['wash'] * 0.35)
-            
-            # Añadir coste bomba aporte
+            res['v_raw'] = man_buf if man_buf > 0 else (res['wash'] * 0.35)
             kwh_ap = (consumo / res['q_filtros']) * res['bomba_kw'] * 365 
             res['opex'] += (kwh_ap * costes['luz'])
             res['breakdown']['Luz'] += (kwh_ap * costes['luz'])
@@ -357,7 +343,6 @@ def create_pdf(res, inputs, modo, user_data):
                     pdf.image(tmp.name, 10, 8, 33)
                     logo_impreso = True
         except: pass
-    
     if not logo_impreso:
         try: pdf.image('logo.png', 10, 8, 33)
         except: pass
@@ -370,13 +355,11 @@ def create_pdf(res, inputs, modo, user_data):
     pdf.cell(0, 10, clean(f"INFORME TÉCNICO - {empresa_nombre}"), 0, 1, 'C')
     pdf.ln(10)
     
-    # PARAMETROS
-    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, clean("1. PARAMETROS DE DISEÑO"), 0, 1)
+    pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, clean("1. PARAMETROS"), 0, 1)
     pdf.set_font("Arial", '', 10); pdf.cell(0, 8, clean(f"Consumo: {inputs['consumo']} L/dia | Punta: {inputs['punta']} L/min"), 0, 1)
     if modo == "Planta Completa (RO)": pdf.cell(0, 8, clean(f"TDS Entrada: {inputs['ppm']} ppm | Dureza: {inputs['dureza']} Hf"), 0, 1)
     pdf.ln(5)
     
-    # EQUIPOS
     pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, clean("2. EQUIPOS"), 0, 1)
     pdf.set_font("Arial", '', 10)
     
@@ -392,9 +375,10 @@ def create_pdf(res, inputs, modo, user_data):
     else:
         if res.get('silex'): pdf.cell(0, 8, clean(f"C. SILEX: {res['silex'].nombre} ({res['silex'].medida_botella})"), 0, 1)
         if res.get('carbon'): pdf.cell(0, 8, clean(f"D. CARBON: {res['carbon'].nombre} ({res['carbon'].medida_botella})"), 0, 1)
-        if res.get('descal'): pdf.cell(0, 8, clean(f"E. DESCAL: {res['descal'].nombre} ({res['descal'].medida_botella})"), 0, 1)
+        if res.get('v_buffer', 0)>0: pdf.cell(0, 8, clean(f"E. BUFFER: {int(res['v_buffer'])} Litros"), 0, 1)
+        if res.get('descal'): pdf.cell(0, 8, clean(f"F. DESCAL: {res['descal'].nombre} ({res['descal'].medida_botella})"), 0, 1)
         if res.get('ro'): 
-            pdf.cell(0, 8, clean(f"F. OSMOSIS: {res['ro'].nombre}"), 0, 1)
+            pdf.cell(0, 8, clean(f"G. OSMOSIS: {res['ro'].nombre}"), 0, 1)
             pdf.set_font("Arial", 'I', 9)
             pdf.cell(0, 6, clean(f"   Config: {res['ro'].membranas} | Prod. Nominal: {res['ro'].produccion_nominal} L/d"), 0, 1)
             pdf.set_font("Arial", '', 10)
@@ -433,13 +417,14 @@ with col_sb:
         st.markdown("""<div class="admin-panel">👑 <b>PANEL GESTIÓN</b></div>""", unsafe_allow_html=True)
         with st.expander("Nuevo Usuario"):
             nu = st.text_input("User"); np = st.text_input("Pass"); nc = st.text_input("Empresa"); 
-            ul = st.file_uploader("Logo", type=['png','jpg'])
+            ul = st.file_uploader("Logo (PNG/JPG)", type=['png','jpg','jpeg','webp'])
             if st.button("➕ Crear"):
                 try:
                     furl = ""
                     if ul:
-                        fb = ul.getvalue(); path = f"logos/{nu}_{int(time.time())}.png"
-                        supabase.storage.from_("logos").upload(path, fb, {"content-type": "image/png"})
+                        file_bytes = ul.getvalue()
+                        path = f"logos/{nu}_{int(time.time())}.png"
+                        supabase.storage.from_("logos").upload(path, file_bytes, {"content-type": "image/png"})
                         furl = supabase.storage.from_("logos").get_public_url(path)
                     supabase.table("usuarios").insert({"username": nu, "password": np, "empresa": nc, "rol": "cliente", "activo": True, "logo_url": furl}).execute()
                     st.success("Creado!")
@@ -452,37 +437,29 @@ with col_sb:
     consumo = st.number_input("Consumo Diario (L)", value=2000, step=100)
     caudal_punta = st.number_input("Caudal Punta (L/min)", value=40)
     horas = st.number_input("Horas Prod", value=20)
-    
+    buffer = st.checkbox("Buffer Intermedio", value=True) if "RO" in modo else False
     descal = st.checkbox("Descalcificador", value=True) if "RO" in modo else True
-    
     ppm = st.number_input("TDS (ppm)", value=800) if "RO" in modo else 0
     dureza = st.number_input("Dureza (Hf)", value=35)
     temp = st.number_input("Temp (C)", value=15) if "RO" in modo else 25
-    
     with st.expander("Costes / Manual"):
         ca = st.number_input("Agua €", 1.5); cs = st.number_input("Sal €", 0.45); cl = st.number_input("Luz €", 0.20)
-        mf = st.number_input("Dep Final (L)", 0); mr = st.number_input("Dep Bruta", 0)
+        mf = st.number_input("Dep Final", 0); mb = st.number_input("Dep Bruta", 0) # mb ahora es depósito agua bruta
     
     costes = {'agua': ca, 'sal': cs, 'luz': cl}
     if st.button("CALCULAR", type="primary", use_container_width=True): st.session_state['run'] = True
 
 if st.session_state.get('run'):
-    # LLAMADA V66 (CORRECTA)
-    # Se eliminó 'buffer' porque la V60+ usa depósitos brutos
-    res = calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, descal, mf, mr)
-    
+    res = calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, buffer, descal, mf, mb)
     if res.get('ro') or res.get('descal'):
         for msg in res['msgs']: col_main.markdown(f"<div class='alert-box alert-yellow'>{msg}</div>", unsafe_allow_html=True)
         
-        # 1. ESQUEMA
-        col_main.subheader("📐 Esquema Hidráulico")
         c1, c2, c3, c4 = col_main.columns(4)
         c1.markdown(f"<div class='tank-card tank-raw'><span class='tank-label'>Depósito Entrada</span><div class='tank-val'>{int(res['v_raw'])} L</div></div>", unsafe_allow_html=True)
-        c2.markdown(f"<div class='pump-card'><span class='tank-label'>Bomba Aporte</span><div class='pump-val'>{res['bomba_nom']}</div></div>", unsafe_allow_html=True)
+        c2.markdown(f"<div class='pump-card'><span class='tank-label'>Bomba Aporte</span><div class='pump-val'>{res.get('bomba_nom', 'N/A')}</div></div>", unsafe_allow_html=True)
         c3.markdown(f"<div class='tech-card'><span class='tech-title'>Caudal Diseño</span><div class='tech-value'>{int(res['q_filtros'])} L/h</div></div>", unsafe_allow_html=True)
         c4.markdown(f"<div class='tank-card tank-final'><span class='tank-label'>Depósito Final</span><div class='tank-val'>{int(res['v_final'])} L</div></div>", unsafe_allow_html=True)
 
-        # 2. EQUIPOS
         col_main.subheader("⚡ Equipos Seleccionados")
         eq1, eq2, eq3, eq4 = col_main.columns(4)
         if modo == "Planta Completa (RO)":
@@ -497,20 +474,20 @@ if st.session_state.get('run'):
         else:
             eq1.markdown(f"<div class='tech-card'><div class='tech-title'>🧂 DESCAL</div><div class='tech-value'>{res['descal'].nombre}</div><div class='tech-sub'>{res['descal'].medida_botella}</div></div>", unsafe_allow_html=True)
 
-        # 3. COSTES
-        col_main.subheader("💸 Económico")
-        cx1, cx2 = col_main.columns(2)
-        if modo == "Planta Completa (RO)":
-            with cx1:
+        col_main.subheader("📊 Análisis")
+        d1, d2 = col_main.columns(2)
+        with d1:
+            st.info(f"**Prod. Horaria:** {int(res.get('q_prod_hora', consumo/horas))} L/h")
+            st.warning(f"**Acometida Min:** {int(res.get('wash', 0))} L/h")
+            st.write(f"Tubería: **{res['tuberia']}**")
+        with d2:
+            if modo == "Planta Completa (RO)":
                 df = pd.DataFrame(list(res['breakdown'].items()), columns=['Item', 'Coste'])
                 fig = px.pie(df, values='Coste', names='Item', hole=0.6, color_discrete_sequence=px.colors.qualitative.Set3)
                 fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="black", showlegend=False, height=150, margin=dict(t=0,b=0,l=0,r=0))
                 st.plotly_chart(fig, use_container_width=True)
-            with cx2:
-                st.metric("OPEX Diario", f"{(res['opex']/365):.2f} €")
-                st.info(f"Caudal Lavado: {int(res['wash'])} L/h")
+            st.metric("OPEX Diario", f"{(res['opex']/365):.2f} €")
 
-        # 4. PDF
         col_main.markdown("---")
         try:
             inputs_pdf = {'consumo': consumo, 'horas': horas, 'origen': origen, 'ppm': ppm, 'dureza': dureza, 'punta': caudal_punta}
