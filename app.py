@@ -14,23 +14,21 @@ from PIL import Image
 # 0. CONFIGURACIÓN VISUAL
 # ==============================================================================
 st.set_page_config(
-    page_title="HYDROLOGIC V74",
+    page_title="HYDROLOGIC V75",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CONEXIÓN SUPABASE CON DIAGNÓSTICO
+# CONEXIÓN SUPABASE
 @st.cache_resource
 def init_connection():
     try:
-        if "supabase" not in st.secrets:
-            return None
+        if "supabase" not in st.secrets: return None
         url = st.secrets["supabase"]["url"]
         key = st.secrets["supabase"]["key"]
         return create_client(url, key)
-    except Exception as e:
-        return None
+    except: return None
 
 supabase = init_connection()
 
@@ -38,171 +36,102 @@ def local_css():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
-        
         html, body, [class*="css"], [data-testid="stAppViewContainer"] {
             font-family: 'Manrope', sans-serif !important;
             background-color: #f8fafc !important;
             color: #0f172a !important;
         }
-
-        [data-testid="stSidebar"] {
-            background-color: #ffffff !important;
-            border-right: 1px solid #cbd5e1;
-        }
-
-        /* INPUTS MEJORADOS */
+        [data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid #cbd5e1; }
         input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border-color: #94a3b8 !important;
-            font-weight: 600 !important;
-            border-radius: 8px !important;
+            background-color: #ffffff !important; color: #000000 !important; border-color: #cbd5e1 !important; font-weight: 600 !important;
         }
-        
-        label { color: #0284c7 !important; font-weight: 700 !important; font-size: 0.95rem !important; }
-
+        label { color: #334155 !important; font-weight: 700 !important; }
         div[data-testid="stMetric"] {
-            background-color: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
-            padding: 20px !important;
-            border-radius: 12px !important;
+            background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; padding: 15px !important; border-radius: 10px !important;
         }
-        div[data-testid="stMetricLabel"] { color: #64748b !important; font-size: 0.85rem !important; }
-        div[data-testid="stMetricValue"] { color: #0f172a !important; font-weight: 800 !important; font-size: 1.8rem !important; }
-
+        div[data-testid="stMetricLabel"] { color: #64748b !important; }
+        div[data-testid="stMetricValue"] { color: #0f172a !important; font-weight: 800 !important; font-size: 1.6rem !important; }
         div.stButton > button:first-child {
             background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
             color: white !important;
             font-weight: 700 !important;
-            border-radius: 8px !important;
-            padding: 0.75rem 1.5rem !important;
-            font-size: 1rem !important;
-            border: none !important;
-            box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2) !important;
+            border-radius: 6px;
         }
-
         .tech-card {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-left: 5px solid #0ea5e9;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
         }
-        .tech-title { color: #0ea5e9; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-        .tech-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-top: 5px; }
-        .tech-sub { color: #64748b; font-size: 0.85rem; }
-        
+        .tech-title { color: #0ea5e9; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+        .tech-value { color: #0f172a; font-size: 1.1rem; font-weight: 800; }
+        .tech-sub { color: #64748b; font-size: 0.8rem; }
         .tank-card {
-            background-color: #f0f9ff;
-            border: 1px solid #bae6fd;
-            padding: 20px;
-            border-radius: 16px;
-            text-align: center;
-            margin-bottom: 20px;
+            background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;
         }
         .tank-final { border-bottom: 4px solid #2563eb; background-color: #eff6ff;}
         .tank-raw { border-bottom: 4px solid #475569; background-color: #f8fafc;}
         .tank-val { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
-        .tank-label { color: #0369a1; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; }
-
+        .tank-label { color: #475569; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; }
         .pump-card {
-            background-color: #fff7ed;
-            border: 1px solid #ffedd5;
-            border-left: 5px solid #f97316;
-            padding: 20px;
-            border-radius: 12px;
+            background-color: #fff7ed; border: 1px solid #ffedd5; border-left: 4px solid #f97316; padding: 15px; border-radius: 8px;
         }
-        .pump-val { color: #c2410c; font-weight: 800; font-size: 1.5rem; }
-        
+        .pump-val { color: #c2410c; font-weight: 800; font-size: 1.4rem; }
         .alert-box {
-            background-color: #fffbeb; border: 1px solid #fcd34d; color: #92400e;
-            padding: 15px; border-radius: 8px; font-size: 0.95rem; margin-top: 15px; font-weight: 500;
+            background-color: #fffbeb; border: 1px solid #fcd34d; color: #92400e; padding: 10px; border-radius: 6px; font-size: 0.9rem; margin-top: 10px;
         }
-        
-        /* LOGIN ESPECÍFICO */
-        .login-title { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 2.8rem; color: #0f172a; margin: 0; text-align: center; letter-spacing: -1px; }
-        .login-sub { color: #64748b; font-size: 0.9rem; text-align: center; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
         .admin-panel { background-color: #1e1b4b; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .login-title { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 2.5rem; color: #0f172a; margin: 0; text-align: center; }
+        .login-sub { color: #64748b; font-size: 0.9rem; text-align: center; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
     </style>
     """, unsafe_allow_html=True)
 local_css()
 
 # ==============================================================================
-# 1. LOGIN (DIAGNOSTICO ACTIVADO)
+# 1. LOGIN
 # ==============================================================================
 def check_auth():
     if "auth" not in st.session_state: st.session_state["auth"] = False
     if st.session_state["auth"]: return True
     
     c1,c2,c3 = st.columns([1, 1.5, 1]) 
-    
     with c2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("<br><br><br>", unsafe_allow_html=True) 
         ic1, ic2, ic3 = st.columns([1, 3, 1]) 
         with ic2:
             try: st.image("logo.png", use_container_width=True)
             except: pass
-            
+        
         st.markdown('<p class="login-title">HYDROLOGIC</p>', unsafe_allow_html=True)
         st.markdown('<p class="login-sub">ENGINEERING ACCESS</p>', unsafe_allow_html=True)
         
-        # AVISO SI FALLA CONEXIÓN
-        if not supabase:
-            st.error("❌ ERROR: No hay conexión con la Base de Datos. Revisa los Secrets.")
-        
         with st.container():
-            user = st.text_input("Usuario", placeholder="ID Cliente")
-            pwd = st.text_input("Contraseña", type="password", placeholder="••••••••")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
+            user = st.text_input("Usuario")
+            pwd = st.text_input("Contraseña", type="password")
             
             if st.button("INICIAR SESIÓN", type="primary", use_container_width=True):
-                # 1. Intento Supabase
                 if supabase:
                     try:
-                        # DEBUG: Ver si conecta
                         response = supabase.table("usuarios").select("*").eq("username", user).eq("password", pwd).execute()
-                        
                         if len(response.data) > 0:
                             u = response.data[0]
                             if u["activo"]:
                                 st.session_state["auth"] = True
                                 st.session_state["user_info"] = u
                                 st.rerun()
-                            else: 
-                                st.error("⚠️ Tu licencia ha expirado. Contacta con soporte.")
-                                return
-                        else:
-                            # Si no encuentra usuario en DB, comprobamos si es admin hardcoded
-                            if user == "admin" and pwd == "hydro2025":
-                                st.session_state["auth"] = True
-                                st.session_state["user_info"] = {"username": "admin", "empresa": "HYDROLOGIC HQ", "rol": "admin", "logo_url": ""}
-                                st.rerun()
-                            else:
-                                st.error("❌ Usuario o contraseña incorrectos en Base de Datos.")
-                    except Exception as e:
-                        st.error(f"❌ Error técnico consultando DB: {e}")
+                            else: st.error("⚠️ Licencia expirada.")
+                            return
+                    except: pass 
 
+                if user == "admin" and pwd == "hydro2025":
+                    st.session_state["auth"] = True
+                    st.session_state["user_info"] = {"username": "admin", "empresa": "HYDROLOGIC HQ", "rol": "admin", "logo_url": ""}
+                    st.rerun()
                 else:
-                    # 2. Si no hay DB, solo admin funciona
-                    if user == "admin" and pwd == "hydro2025":
-                        st.session_state["auth"] = True
-                        st.session_state["user_info"] = {"username": "admin", "empresa": "HYDROLOGIC HQ", "rol": "admin", "logo_url": ""}
-                        st.rerun()
-                    else:
-                        st.error("❌ Sin conexión a DB. Solo admin disponible.")
-            
-            st.markdown("<div style='text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 30px;'>v74.0 | Secure Platform</div>", unsafe_allow_html=True)
-
+                    st.error("❌ Datos incorrectos")
     return False
 
 if not check_auth(): st.stop()
 
 # ==============================================================================
-# 2. LÓGICA (V74 FIXED)
+# 2. LÓGICA
 # ==============================================================================
 class EquipoRO:
     def __init__(self, n, prod, ppm, ef, kw, mem):
@@ -219,8 +148,8 @@ ro_db = [
     EquipoRO("ALFA 840 (Custom)", 40000, 2000, 0.7, 3.0, "8x4040"),
     EquipoRO("AP-6000 LUXE", 18000, 6000, 0.6, 2.2, "4x4040 High TDS"), EquipoRO("AP-10000 LUXE", 30000, 6000, 0.6, 4.0, "6x4040 High TDS"),
 ]
-silex_db = [Filtro("Silex", "SIL 10x35", "10x35", 0.8, 2.0), Filtro("Silex", "SIL 10x44", "10x44", 0.8, 2.0), Filtro("Silex", "SIL 12x48", "12x48", 1.1, 3.0), Filtro("Silex", "SIL 18x65", "18x65", 2.6, 6.0), Filtro("Silex", "SIL 21x60", "21x60", 3.6, 9.0), Filtro("Silex", "SIL 24x69", "24x69", 4.4, 14.0), Filtro("Silex", "SIL 30x72", "30x72", 7.0, 18.0), Filtro("Silex", "SIL 36x72", "36x72", 10.0, 25.0)]
-carbon_db = [Filtro("Carbon", "DEC 30L", "10x35", 0.38, 2.0), Filtro("Carbon", "DEC 45L", "10x54", 0.72, 3.0), Filtro("Carbon", "DEC 60L", "12x48", 0.80, 2.5), Filtro("Carbon", "DEC 75L", "13x54", 1.10, 5.0), Filtro("Carbon", "DEC 90KG", "18x65", 2.68, 6.0)]
+silex_db = [Filtro("Silex", "SIL 10x35", "10x35", 0.8, 2.0), Filtro("Silex", "SIL 10x44", "10x44", 0.8, 2.0), Filtro("Silex", "SIL 12x48", "12x48", 1.1, 3.5), Filtro("Silex", "SIL 18x65", "18x65", 2.6, 8.0), Filtro("Silex", "SIL 21x60", "21x60", 3.6, 11.0), Filtro("Silex", "SIL 24x69", "24x69", 4.4, 14.0), Filtro("Silex", "SIL 30x72", "30x72", 7.0, 20.0), Filtro("Silex", "SIL 36x72", "36x72", 10.0, 28.0)]
+carbon_db = [Filtro("Carbon", "DEC 30L", "10x35", 0.38, 2.0), Filtro("Carbon", "DEC 45L", "10x54", 0.72, 3.0), Filtro("Carbon", "DEC 60L", "12x48", 0.80, 4.0), Filtro("Carbon", "DEC 75L", "13x54", 1.10, 5.0), Filtro("Carbon", "DEC 90KG", "18x65", 2.68, 8.0)]
 descal_db = [Filtro("Descal", "BI BLOC 30L", "10x35", 1.8, 2.0, 4.5, 192), Filtro("Descal", "BI BLOC 60L", "12x48", 3.6, 3.5, 9.0, 384), Filtro("Descal", "TWIN 40L", "10x44", 2.4, 2.5, 6.0, 256), Filtro("Descal", "TWIN 100L", "14x65", 6.0, 5.0, 15.0, 640), Filtro("Descal", "DUPLEX 300L", "24x69", 6.5, 9.0, 45.0, 1800)]
 
 def calcular_bomba(caudal_lh):
@@ -258,10 +187,9 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['wash'] = res['descal'].caudal_wash * 1000
             res['q_filtros'] = q_target
         else: res['descal'] = None
-        
         q_bomba = max(res.get('q_filtros', 0), res.get('wash', 0))
         res['bomba_nom'], res['bomba_kw'] = calcular_bomba(q_bomba)
-        res['v_raw'] = man_buf if man_buf > 0 else res.get('wash', 0) * 0.4 # Usamos man_buf como variable para deposito bruta
+        res['v_raw'] = man_buf if man_buf > 0 else res.get('wash', 0) * 0.4
     else: 
         tcf = 1.0 if temp >= 25 else max(1.0 - ((25 - temp) * 0.03), 0.1)
         factor_recuperacion = 0.8 if ppm > 2500 else 1.0
@@ -304,7 +232,7 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['wash'] = max((res['silex'].caudal_wash if res.get('silex') else 0), (res['carbon'].caudal_wash if res.get('carbon') else 0), (res['descal'].caudal_wash if res.get('descal') else 0)) * 1000
             q_bomba_aporte = max(res['q_filtros'], res['wash'])
             res['bomba_nom'], res['bomba_kw'] = calcular_bomba(q_bomba_aporte)
-            res['v_raw'] = man_buf if man_buf > 0 else (res['wash'] * 0.35) # man_buf reutilizado como deposito bruto
+            res['v_raw'] = man_buf if man_buf > 0 else (res['wash'] * 0.35)
             kwh_ap = (consumo / res['q_filtros']) * res['bomba_kw'] * 365 
             res['opex'] = ((kwh + kwh_ap)*costes['luz']) + (sal*costes['sal']) + (m3*costes['agua'])
             res['breakdown']['Luz'] += (kwh_ap * costes['luz'])
@@ -345,14 +273,22 @@ def create_pdf(res, inputs, modo, user_data):
     else:
         if res.get('silex'): pdf.cell(0, 8, clean(f"C. SILEX: {res['silex'].nombre} ({res['silex'].medida_botella})"), 0, 1)
         if res.get('carbon'): pdf.cell(0, 8, clean(f"D. CARBON: {res['carbon'].nombre} ({res['carbon'].medida_botella})"), 0, 1)
-        if res.get('v_buffer', 0)>0: pdf.cell(0, 8, clean(f"E. BUFFER: {int(res['v_buffer'])} L"), 0, 1)
+        if res.get('v_buffer', 0)>0: pdf.cell(0, 8, clean(f"E. BUFFER: {int(res['v_buffer'])} Litros"), 0, 1)
         if res.get('descal'): pdf.cell(0, 8, clean(f"F. DESCAL: {res['descal'].nombre} ({res['descal'].medida_botella})"), 0, 1)
-        if res.get('ro'): pdf.cell(0, 8, clean(f"G. OSMOSIS: {res['ro'].nombre} ({res['ro'].membranas})"), 0, 1)
+        if res.get('ro'): pdf.cell(0, 8, clean(f"G. OSMOSIS: {res['ro'].nombre}"), 0, 1)
     pdf.ln(5)
     pdf.set_font("Arial", 'B', 12); pdf.cell(0, 10, clean("3. REQUISITOS"), 0, 1); pdf.set_font("Arial", '', 10)
     pdf.cell(0, 8, clean(f"DEPOSITO FINAL: {int(res['v_final'])} Litros"), 0, 1)
     pdf.set_text_color(200,0,0); pdf.cell(0, 8, clean(f"ACOMETIDA REQUERIDA: {int(res.get('wash', 0))} L/h a 2.5 bar"), 0, 1); pdf.set_text_color(0,0,0)
     pdf.cell(0, 8, clean(f"TUBERIA: {res['tuberia']}"), 0, 1)
+    
+    # --- AVISO LEGAL (DISCLAIMER) ---
+    pdf.set_y(-40) # Pie de página
+    pdf.set_font("Arial", 'I', 7)
+    pdf.set_text_color(100, 100, 100)
+    disclaimer = "AVISO LEGAL: Este documento es una simulacion teorica y no constituye un proyecto de ingenieria visado. Los resultados son recomendaciones basadas en parametros estandar. Hydrologic no se hace responsable de variaciones en la calidad del agua de origen, condiciones de instalacion o mantenimiento. El instalador debe verificar in situ los requisitos hidraulicos y electricos antes de la ejecucion."
+    pdf.multi_cell(0, 3, clean(disclaimer), 0, 'C')
+    
     return pdf.output(dest='S').encode('latin-1')
 
 # ==============================================================================
@@ -383,17 +319,15 @@ with col_sb:
             nu = st.text_input("User"); np = st.text_input("Pass"); nc = st.text_input("Empresa"); 
             ul = st.file_uploader("Logo (PNG/JPG)", type=['png','jpg','jpeg','webp'])
             if st.button("➕ Crear"):
-                if not supabase: st.error("Sin conexión DB")
-                else:
-                    try:
-                        furl = ""
-                        if ul:
-                            fb = ul.getvalue(); path = f"logos/{nu}_{int(time.time())}.png"
-                            supabase.storage.from_("logos").upload(path, fb, {"content-type": "image/png"})
-                            furl = supabase.storage.from_("logos").get_public_url(path)
-                        supabase.table("usuarios").insert({"username": nu, "password": np, "empresa": nc, "rol": "cliente", "activo": True, "logo_url": furl}).execute()
-                        st.success("Creado!")
-                    except Exception as e: st.error(f"Error: {e}")
+                try:
+                    furl = ""
+                    if ul:
+                        fb = ul.getvalue(); path = f"logos/{nu}_{int(time.time())}.png"
+                        supabase.storage.from_("logos").upload(path, fb, {"content-type": "image/png"})
+                        furl = supabase.storage.from_("logos").get_public_url(path)
+                    supabase.table("usuarios").insert({"username": nu, "password": np, "empresa": nc, "rol": "cliente", "activo": True, "logo_url": furl}).execute()
+                    st.success("Creado!")
+                except Exception as e: st.error(f"Error: {e}")
 
     if st.button("Cerrar Sesión"): st.session_state["auth"] = False; st.rerun()
     st.subheader("Configuración")
@@ -409,13 +343,12 @@ with col_sb:
     temp = st.number_input("Temp (C)", value=15) if "RO" in modo else 25
     with st.expander("Costes / Manual"):
         ca = st.number_input("Agua €", 1.5); cs = st.number_input("Sal €", 0.45); cl = st.number_input("Luz €", 0.20)
-        mf = st.number_input("Dep Final (L)", 0); mr = st.number_input("Dep Bruta/Buffer", 0)
-        mb = mr # En el front unificamos el input manual para depósito intermedio/bruto
+        mf = st.number_input("Dep Final (L)", 0); mr = st.number_input("Dep Bruta", 0)
+        mb = st.number_input("Buffer (L)", 0)
     costes = {'agua': ca, 'sal': cs, 'luz': cl}
     if st.button("CALCULAR", type="primary", use_container_width=True): st.session_state['run'] = True
 
 if st.session_state.get('run'):
-    # Llamada unificada usando 'mb' para el depósito intermedio o bruto
     res = calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, buffer, descal, mf, mb)
     if res.get('ro') or res.get('descal'):
         for msg in res['msgs']: col_main.markdown(f"<div class='alert-box alert-yellow'>{msg}</div>", unsafe_allow_html=True)
