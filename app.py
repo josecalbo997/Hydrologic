@@ -14,23 +14,30 @@ from PIL import Image
 # 0. CONFIGURACIÓN VISUAL
 # ==============================================================================
 st.set_page_config(
-    page_title="HYDROLOGIC V69",
+    page_title="HYDROLOGIC V70",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CONEXIÓN SUPABASE (CON DIAGNÓSTICO)
+# --- CONEXIÓN SUPABASE (CON DEBUGGING) ---
 @st.cache_resource
 def init_connection():
     try:
-        # Intentamos leer los secretos
+        # Verificamos si existen los secretos
+        if "supabase" not in st.secrets:
+            st.error("❌ ERROR CRÍTICO: No se encuentran los secretos [supabase] en la configuración.")
+            return None
+        
         url = st.secrets["supabase"]["url"]
         key = st.secrets["supabase"]["key"]
-        return create_client(url, key)
+        
+        # Intentamos crear el cliente
+        client = create_client(url, key)
+        return client
+        
     except Exception as e:
-        # Si falla, no devolvemos nada pero avisamos en consola/log
-        print(f"Error conexión DB: {e}")
+        st.error(f"❌ ERROR DE CONEXIÓN A BASE DE DATOS: {e}")
         return None
 
 supabase = init_connection()
@@ -55,8 +62,7 @@ def local_css():
         div[data-testid="stMetricLabel"] { color: #64748b !important; }
         div[data-testid="stMetricValue"] { color: #0f172a !important; font-weight: 800 !important; font-size: 1.6rem !important; }
         div.stButton > button:first-child {
-            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
-            color: white !important; font-weight: 700 !important; border-radius: 6px;
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important; color: white !important; font-weight: 700 !important; border-radius: 6px;
         }
         .tech-card {
             background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
@@ -98,9 +104,9 @@ def check_auth():
         st.markdown("### 🔐 HYDROLOGIC ACCESS")
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # AVISO DE CONEXIÓN
+        # AVISO VISUAL SI FALLA DB
         if not supabase:
-            st.warning("⚠️ Sin conexión a Base de Datos. Solo acceso Admin local.")
+            st.error("⚠️ SISTEMA EN MODO OFFLINE: Base de datos desconectada. Revisa los Secrets.")
 
         user = st.text_input("Usuario")
         pwd = st.text_input("Contraseña", type="password")
@@ -126,7 +132,7 @@ def check_auth():
                 st.session_state["user_info"] = {"username": "admin", "empresa": "HYDROLOGIC HQ", "rol": "admin", "logo_url": ""}
                 st.rerun()
             else:
-                st.error("❌ Datos incorrectos")
+                st.error("Credenciales incorrectas")
     return False
 
 if not check_auth(): st.stop()
@@ -188,6 +194,7 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['wash'] = res['descal'].caudal_wash * 1000
             res['q_filtros'] = q_target
         else: res['descal'] = None
+        
         q_bomba = max(res.get('q_filtros', 0), res.get('wash', 0))
         res['bomba_nom'], res['bomba_kw'] = calcular_bomba(q_bomba)
         res['v_raw'] = man_raw if man_raw > 0 else res.get('wash', 0) * 0.4
@@ -196,6 +203,7 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
         factor_recuperacion = 0.8 if ppm > 2500 else 1.0
         q_target = consumo
         ro_cands = [r for r in ro_db if ppm <= r.max_ppm and ((r.produccion_nominal * tcf / 24) * horas) >= q_target]
+        
         if ro_cands:
             res['ro'] = next((r for r in ro_cands if "ALFA" in r.nombre or "AP" in r.nombre), ro_cands[-1]) if q_target > 600 else ro_cands[0]
             res['efi_real'] = res['ro'].eficiencia * factor_recuperacion
@@ -215,6 +223,7 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             res['silex'] = sx_cands[0] if sx_cands else None
             cb_cands = [c for c in carbon_db if (c.caudal_max * 1000) >= q_filtros]
             res['carbon'] = cb_cands[0] if cb_cands else None
+
             if descal_on and dureza > 5:
                 ds = [d for d in descal_db if (d.caudal_max*1000) >= q_filtros]
                 if ds:
@@ -229,14 +238,21 @@ def calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, cost
             kwh = (consumo / res['q_prod_hora']) * res['ro'].potencia_kw * 365
             sal = res.get('sal_anual', 0)
             m3 = (agua_in/1000)*365
+            res['opex'] = (kwh*costes['luz']) + (sal*costes['sal']) + (m3*costes['agua'])
             res['breakdown'] = {'Agua': m3*costes['agua'], 'Sal': sal*costes['sal'], 'Luz': kwh*costes['luz']}
-            res['wash'] = max((res['silex'].caudal_wash if res.get('silex') else 0), (res['carbon'].caudal_wash if res.get('carbon') else 0), (res['descal'].caudal_wash if res.get('descal') else 0)) * 1000
+            
+            w1 = res['silex'].caudal_wash if res.get('silex') else 0
+            w2 = res['carbon'].caudal_wash if res.get('carbon') else 0
+            w3 = res['descal'].caudal_wash if res.get('descal') else 0
+            res['wash'] = max(w1, w2, w3) * 1000
+            
             q_bomba_aporte = max(res['q_filtros'], res['wash'])
             res['bomba_nom'], res['bomba_kw'] = calcular_bomba(q_bomba_aporte)
             res['v_raw'] = man_raw if man_raw > 0 else (res['wash'] * 0.35)
             kwh_ap = (consumo / res['q_filtros']) * res['bomba_kw'] * 365 
-            res['opex'] = ((kwh + kwh_ap)*costes['luz']) + (sal*costes['sal']) + (m3*costes['agua'])
+            res['opex'] += (kwh_ap * costes['luz'])
             res['breakdown']['Luz'] += (kwh_ap * costes['luz'])
+            
         else: res['ro'] = None
 
     max_flow = max(res.get('q_filtros', 0), res.get('wash', 0))
@@ -311,8 +327,7 @@ with col_sb:
             nu = st.text_input("User"); np = st.text_input("Pass"); nc = st.text_input("Empresa"); 
             ul = st.file_uploader("Logo (PNG/JPG)", type=['png','jpg','jpeg','webp'])
             if st.button("➕ Crear"):
-                if not supabase:
-                     st.error("Error: DB no conectada")
+                if not supabase: st.error("Sin conexión a DB")
                 else:
                     try:
                         furl = ""
@@ -331,27 +346,31 @@ with col_sb:
     consumo = st.number_input("Consumo Diario (L)", value=2000, step=100)
     caudal_punta = st.number_input("Caudal Punta (L/min)", value=40)
     horas = st.number_input("Horas Prod", value=20)
-    buffer = st.checkbox("Buffer Intermedio", value=True) if "RO" in modo else False
+    
     descal = st.checkbox("Descalcificador", value=True) if "RO" in modo else True
+    
     ppm = st.number_input("TDS (ppm)", value=800) if "RO" in modo else 0
     dureza = st.number_input("Dureza (Hf)", value=35)
     temp = st.number_input("Temp (C)", value=15) if "RO" in modo else 25
+    
     with st.expander("Costes / Manual"):
         ca = st.number_input("Agua €", 1.5); cs = st.number_input("Sal €", 0.45); cl = st.number_input("Luz €", 0.20)
-        mf = st.number_input("Dep Final", 0); mr = st.number_input("Dep Bruta", 0)
-        mb = st.number_input("Buffer (L)", 0)
+        mf = st.number_input("Dep Final (L)", 0); mr = st.number_input("Dep Bruta", 0)
+        buffer = False # Obsoleto en lógica actual
+        mb = 0 # Obsoleto
+    
     costes = {'agua': ca, 'sal': cs, 'luz': cl}
     if st.button("CALCULAR", type="primary", use_container_width=True): st.session_state['run'] = True
 
 if st.session_state.get('run'):
-    # LLAMADA V69 (FIXED)
+    # LLAMADA V70 FIX
     res = calcular(origen, modo, consumo, caudal_punta, ppm, dureza, temp, horas, costes, buffer, descal, mf, mr)
     if res.get('ro') or res.get('descal'):
         for msg in res['msgs']: col_main.markdown(f"<div class='alert-box alert-yellow'>{msg}</div>", unsafe_allow_html=True)
         
         c1, c2, c3, c4 = col_main.columns(4)
-        c1.markdown(f"<div class='tank-card tank-raw'><span class='tank-label'>Depósito Entrada</span><div class='tank-val'>{int(res.get('v_raw', 0))} L</div></div>", unsafe_allow_html=True)
-        c2.markdown(f"<div class='pump-card'><span class='tank-label'>Bomba Aporte</span><div class='pump-val'>{res.get('bomba_nom', 'N/A')}</div></div>", unsafe_allow_html=True)
+        c1.markdown(f"<div class='tank-card tank-raw'><span class='tank-label'>Depósito Entrada</span><div class='tank-val'>{int(res['v_raw'])} L</div></div>", unsafe_allow_html=True)
+        c2.markdown(f"<div class='pump-card'><span class='tank-label'>Bomba Aporte</span><div class='pump-val'>{res['bomba_nom']}</div></div>", unsafe_allow_html=True)
         c3.markdown(f"<div class='tech-card'><span class='tech-title'>Caudal Diseño</span><div class='tech-value'>{int(res['q_filtros'])} L/h</div></div>", unsafe_allow_html=True)
         c4.markdown(f"<div class='tank-card tank-final'><span class='tank-label'>Depósito Final</span><div class='tank-val'>{int(res['v_final'])} L</div></div>", unsafe_allow_html=True)
 
